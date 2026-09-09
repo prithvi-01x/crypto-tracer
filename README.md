@@ -624,3 +624,14 @@ An automated browser regression suite (executed via Playwright and pypdf) valida
 - **Path Traversal Protection:** Report download endpoints use cryptographically random UUIDs and strict filename sanitization, preventing directory traversal attacks.
 - **CORS Hardening:** Cross-Origin Resource Sharing (CORS) is restricted to explicit trusted development and production origins configured in environment settings.
 - **Rate-Limiting & Backoff:** All outbound RPC calls to TronGrid implement exponential backoff and jitter to adhere to public API rate limits and prevent denial-of-service throttling.
+
+---
+
+## Forensic Boundaries & Known Limitations
+
+Forensic integrity requires transparent communication of analytical boundaries:
+
+1. **Obfuscation & Mixer Contracts:** When funds enter known smart contract mixers (e.g., Tornado Cash) or privacy pools, Crypto-Tracer halts traversal along that branch and tags the node with an Obfuscation Boundary badge. The platform does not claim to de-anonymize cryptographically sound zero-knowledge mixers.
+2. **Cross-Chain Bridge Boundaries:** Traversal is currently optimized for TRON (TRC-20 USDT). If funds enter a cross-chain bridge contract (e.g., to Ethereum or BSC), the bridge is flagged as a terminal boundary node.
+3. **Off-Chain Fiat Settlement:** On-chain tracing tracks tokens up to the custodial exchange deposit address. Final fiat bank payouts occur through off-chain banking rails (IMPS, UPI, NEFT) accessible only via Section 94 BNSS legal orders served on the exchange.
+4. **Client State Persistence:** In the current single-page React workstation, refreshing the browser (F5) reloads the application to the Case Register table. All cases, traces, evidence DAGs, and generated reports remain 100% persisted in PostgreSQL.
