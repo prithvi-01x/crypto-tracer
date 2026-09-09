@@ -32,6 +32,9 @@ class TraceStatusResponse(BaseModel):
     pruned_nodes: Optional[int] = None
     raw_transfers_count: int = 0
     relevant_transfers_count: int = 0
+    boundary_code: Optional[str] = None
+    investigator_summary: Optional[str] = None
+    is_partial: bool = False
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
 

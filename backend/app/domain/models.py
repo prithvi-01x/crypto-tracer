@@ -82,3 +82,4 @@ class InvestigationGraph(BaseModel):
     edges: List[GraphEdge]
     pruned_records: List[PrunedRecord] = Field(default_factory=list)
     meta: Dict[str, Any] = Field(default_factory=dict)
+    boundary: Optional[Dict[str, Any]] = None

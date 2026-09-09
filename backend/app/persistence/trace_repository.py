@@ -42,18 +42,23 @@ class TraceRepository:
         trace_id: str,
         graph: InvestigationGraph,
         duration_ms: int,
+        boundary_code: Optional[str] = None,
+        investigator_summary: Optional[str] = None,
+        status: str = "COMPLETED",
     ) -> Optional[Trace]:
         trace = await TraceRepository.get_by_id(session, trace_id)
         if not trace:
             return None
 
-        trace.status = "COMPLETED"
+        trace.status = status
         trace.completed_at = datetime.now(timezone.utc)
         trace.graph_data = graph.model_dump(mode="json")
         trace.node_count = len(graph.nodes)
         trace.edge_count = len(graph.edges)
         trace.pruned_count = len(graph.pruned_records)
         trace.duration_ms = duration_ms
+        trace.boundary_code = boundary_code
+        trace.investigator_summary = investigator_summary
 
         await session.commit()
         await session.refresh(trace)
@@ -64,6 +69,8 @@ class TraceRepository:
         session: AsyncSession,
         trace_id: str,
         error_message: str,
+        boundary_code: Optional[str] = None,
+        investigator_summary: Optional[str] = None,
     ) -> Optional[Trace]:
         trace = await TraceRepository.get_by_id(session, trace_id)
         if not trace:
@@ -71,7 +78,13 @@ class TraceRepository:
 
         trace.status = "FAILED"
         trace.completed_at = datetime.now(timezone.utc)
-        trace.config = {"error": error_message}
+        trace.boundary_code = boundary_code
+        trace.investigator_summary = investigator_summary or error_message
+        trace.config = {
+            "error": error_message,
+            "boundary_code": boundary_code,
+            "investigator_summary": investigator_summary or error_message,
+        }
 
         await session.commit()
         await session.refresh(trace)

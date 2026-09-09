@@ -67,6 +67,8 @@ class Trace(Base):
     edge_count = Column(Integer, nullable=False, default=0)
     pruned_count = Column(Integer, nullable=False, default=0)
     duration_ms = Column(Integer, nullable=True)
+    boundary_code = Column(String(50), nullable=True)
+    investigator_summary = Column(Text, nullable=True)
 
     case = relationship("Case", back_populates="traces")
     attributions = relationship("AttributionResult", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
