@@ -20,6 +20,7 @@ class VASPEntry(BaseModel):
 
 class SweepResult(BaseModel):
     sweep_ratio: float = Field(..., description="Ratio of swept funds to relevant received funds [0.0 - 1.0]")
+    dominant_ratio: float = Field(1.0, description="Concentration ratio sent to dominant destination [0.0 - 1.0]")
     received_usdt: Decimal = Field(..., description="Total relevant USDT received")
     swept_usdt: Decimal = Field(..., description="Total USDT swept out")
     dominant_destination: Optional[str] = Field(None, description="Dominant outgoing recipient wallet")
@@ -50,14 +51,16 @@ class TemporalResult(BaseModel):
 
 
 class FactorScores(BaseModel):
-    direct_tag: float = Field(..., ge=0.0, le=1.0, description="Weight: 0.35")
-    sweep: float = Field(..., ge=0.0, le=1.0, description="Weight: 0.35")
-    fan_in: float = Field(..., ge=0.0, le=1.0, description="Weight: 0.15")
-    temporal: float = Field(..., ge=0.0, le=1.0, description="Weight: 0.15")
+    direct_tag: float = Field(..., ge=0.0, le=1.0, description="Direct candidate registry tag [0.0 - 1.0]")
+    downstream_vasp_match: float = Field(0.0, ge=0.0, le=1.0, description="Downstream recipient VASP match [0.0 - 1.0]")
+    sweep: float = Field(..., ge=0.0, le=1.0, description="Consolidation / sweep mechanics score [0.0 - 1.0]")
+    fan_in: float = Field(..., ge=0.0, le=1.0, description="Multi-source convergence score [0.0 - 1.0]")
+    temporal: float = Field(..., ge=0.0, le=1.0, description="Temporal delay score [0.0 - 1.0]")
 
 
 class FactorExplanations(BaseModel):
     direct_tag: str
+    downstream_vasp_match: str
     sweep: str
     fan_in: str
     temporal: str

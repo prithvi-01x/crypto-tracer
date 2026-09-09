@@ -30,6 +30,7 @@ class AttributionRepository:
                 confidence=Decimal(str(c.confidence)),
                 confidence_band=c.confidence_band,
                 direct_tag_score=Decimal(str(c.factors.direct_tag)),
+                downstream_match_score=Decimal(str(c.factors.downstream_vasp_match)),
                 sweep_score=Decimal(str(c.factors.sweep)),
                 fan_in_score=Decimal(str(c.factors.fan_in)),
                 temporal_score=Decimal(str(c.factors.temporal)),

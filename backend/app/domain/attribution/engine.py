@@ -71,7 +71,7 @@ class AttributionEngine:
         meta = {
             "total_candidates_evaluated": len(candidate_addresses),
             "retained_candidates_count": len(candidates),
-            "algorithm": "0.35*tag + 0.35*sweep + 0.15*fan_in + 0.15*temporal",
+            "algorithm": "0.35*effective_tag(direct|0.80*downstream) + 0.35*sweep + 0.15*fan_in + 0.15*temporal",
             "registry_version": self.registry.VERSION,
         }
 
@@ -87,17 +87,17 @@ class AttributionEngine:
     def _score_candidate(self, address: str, graph: InvestigationGraph) -> Optional[VASPCandidate]:
         normalized_addr = address.strip()
 
-        # 1. Direct Tag Analysis
+        # 1. Direct Tag Analysis (strictly for candidate address itself)
         direct_entry = self.registry.get(normalized_addr)
+        is_directly_tagged = direct_entry is not None
 
-        # 2. Sweep Analysis
+        # 2. Pure Behavioral Sweep Analysis (consolidation mechanics)
         sweep_res = self.sweep_analyzer.analyze(normalized_addr, graph)
 
-        # 3. Destination Entity Tag (if this address swept into a known VASP hot wallet)
+        # 3. Downstream VASP Match Analysis (separate from direct tag)
         dest_entry = self.registry.get(sweep_res.dominant_destination) if sweep_res.dominant_destination else None
 
-        # Determine attributed entity and direct tag score
-        if direct_entry:
+        if is_directly_tagged:
             vasp_id = direct_entry.vasp_id
             vasp_name = direct_entry.entity_name
             verification_status = direct_entry.verification_status
@@ -107,25 +107,31 @@ class AttributionEngine:
             else:
                 direct_tag_score = 0.60
                 tag_explanation = f"Heuristic tag match: Wallet has an unverified/community tag associated with {vasp_name}."
-        elif dest_entry and sweep_res.is_sweep:
-            # Intermediate deposit address sweeping into verified exchange hot wallet
+            downstream_vasp_match = 0.0
+            downstream_explanation = "N/A: Candidate address is directly tagged as an official VASP wallet."
+        elif dest_entry:
+            # Candidate itself is NOT directly tagged; funds flow downstream into a known VASP wallet
             vasp_id = dest_entry.vasp_id
             vasp_name = dest_entry.entity_name
             verification_status = dest_entry.verification_status
+            direct_tag_score = 0.0
+            tag_explanation = "This candidate is not directly tagged in the VASP registry."
             if verification_status == "VERIFIED":
-                direct_tag_score = 0.95
-                tag_explanation = f"Downstream consolidation match: Wallet sweeps funds directly into verified {vasp_name} hot wallet ({dest_entry.address[:8]}...)."
+                downstream_vasp_match = 1.0
+                downstream_explanation = f"This candidate is not directly tagged; its funds sweep into a verified {vasp_name} wallet."
             else:
-                direct_tag_score = 0.50
-                tag_explanation = f"Downstream heuristic match: Wallet sweeps into an unverified {vasp_name} candidate address."
+                downstream_vasp_match = 0.50
+                downstream_explanation = f"This candidate is not directly tagged; its funds flow toward a candidate {vasp_name} address with heuristic status."
         else:
             vasp_id = "unknown_entity"
             vasp_name = "Unknown Service / Unidentified VASP"
             verification_status = "UNVERIFIED"
             direct_tag_score = 0.0
-            tag_explanation = "No direct registry tag or verified destination match found in current intelligence database."
+            tag_explanation = "This candidate is not directly tagged in the VASP registry."
+            downstream_vasp_match = 0.0
+            downstream_explanation = "No downstream consolidation into a known VASP identified."
 
-        # 4. Fan-In Analysis (evaluate on the destination hot wallet if sweeping, else on the candidate itself)
+        # 4. Fan-In Analysis (evaluate on destination hot wallet if sweeping, else candidate itself)
         eval_fan_in_addr = sweep_res.dominant_destination if (dest_entry and sweep_res.is_sweep) else normalized_addr
         fan_in_res = self.fan_in_analyzer.analyze(eval_fan_in_addr, graph)
 
@@ -133,9 +139,16 @@ class AttributionEngine:
         temporal_res = self.temporal_analyzer.analyze(normalized_addr, graph)
 
         # 6. Composite Confidence Calculation
-        # CS = 0.35 * direct_tag + 0.35 * sweep + 0.15 * fan_in + 0.15 * temporal
+        # The 0.35 entity identification weight is driven by direct_tag (if directly tagged)
+        # or downstream_vasp_match with an indirect attribution factor of 0.80.
+        # This keeps the documented formula weights intact without double-counting downstream evidence as direct_tag.
+        if is_directly_tagged:
+            effective_entity_tag = direct_tag_score
+        else:
+            effective_entity_tag = 0.80 * downstream_vasp_match
+
         confidence_raw = (
-            0.35 * direct_tag_score +
+            0.35 * effective_entity_tag +
             0.35 * sweep_res.score +
             0.15 * fan_in_res.score +
             0.15 * temporal_res.score
@@ -158,8 +171,11 @@ class AttributionEngine:
 
         # 9. Evidence Bullet Points for UI/Dossier
         evidence_points: List[str] = []
-        if direct_tag_score >= 0.50:
+        if is_directly_tagged and direct_tag_score >= 0.50:
             evidence_points.append(f"✓ Direct tag evidence: {tag_explanation}")
+        elif downstream_vasp_match >= 0.50:
+            evidence_points.append(f"✓ Downstream VASP match: {downstream_explanation}")
+
         if sweep_res.score >= 0.70:
             evidence_points.append(f"✓ Sweep consolidation: {sweep_res.explanation}")
         if fan_in_res.score >= 0.60:
@@ -168,7 +184,7 @@ class AttributionEngine:
             evidence_points.append(f"✓ Programmatic temporal signal: {temporal_res.explanation}")
 
         if not evidence_points:
-            evidence_points.append(f"• Weak attribution signals: Insufficient patterns to strongly attribute to a known VASP.")
+            evidence_points.append("• Weak attribution signals: Insufficient patterns to strongly attribute to a known VASP.")
 
         return VASPCandidate(
             candidate_address=normalized_addr,
@@ -181,12 +197,14 @@ class AttributionEngine:
             verification_status=verification_status,
             factors=FactorScores(
                 direct_tag=round(direct_tag_score, 4),
+                downstream_vasp_match=round(downstream_vasp_match, 4),
                 sweep=round(sweep_res.score, 4),
                 fan_in=round(fan_in_res.score, 4),
                 temporal=round(temporal_res.score, 4),
             ),
             explanations=FactorExplanations(
                 direct_tag=tag_explanation,
+                downstream_vasp_match=downstream_explanation,
                 sweep=sweep_res.explanation,
                 fan_in=fan_in_res.explanation,
                 temporal=temporal_res.explanation,

@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from datetime import datetime, timezone
 from sqlalchemy import (
     Column,
@@ -79,6 +80,7 @@ class AttributionResult(Base):
     confidence = Column(Numeric(precision=5, scale=4), nullable=False)
     confidence_band = Column(String(20), nullable=False)
     direct_tag_score = Column(Numeric(precision=5, scale=4), nullable=False)
+    downstream_match_score = Column(Numeric(precision=5, scale=4), nullable=False, default=Decimal("0.0"))
     sweep_score = Column(Numeric(precision=5, scale=4), nullable=False)
     fan_in_score = Column(Numeric(precision=5, scale=4), nullable=False)
     temporal_score = Column(Numeric(precision=5, scale=4), nullable=False)

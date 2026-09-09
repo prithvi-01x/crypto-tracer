@@ -6,14 +6,16 @@ from backend.app.domain.attribution.models import VASPCandidate, AttributionRepo
 
 
 class AttributionFactorsSchema(BaseModel):
-    direct_tag: float = Field(..., description="Weight: 0.35")
-    sweep: float = Field(..., description="Weight: 0.35")
-    fan_in: float = Field(..., description="Weight: 0.15")
-    temporal: float = Field(..., description="Weight: 0.15")
+    direct_tag: float = Field(..., description="Direct candidate registry tag [0.0 - 1.0]")
+    downstream_vasp_match: float = Field(default=0.0, description="Downstream recipient VASP match [0.0 - 1.0]")
+    sweep: float = Field(..., description="Consolidation / sweep mechanics score [0.0 - 1.0]")
+    fan_in: float = Field(..., description="Multi-source convergence score [0.0 - 1.0]")
+    temporal: float = Field(..., description="Temporal delay score [0.0 - 1.0]")
 
 
 class AttributionExplanationsSchema(BaseModel):
     direct_tag: str
+    downstream_vasp_match: str
     sweep: str
     fan_in: str
     temporal: str
