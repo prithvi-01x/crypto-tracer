@@ -392,3 +392,24 @@ Crypto-Tracer is implemented as a modular layered monolith, prioritizing rapid d
 │  Redis 7 (Cache & Sessions)   │   │  Deterministic Fixtures (Demo Replay)   │
 └───────────────────────────────┘   └─────────────────────────────────────────┘
 ```
+
+---
+
+## Technology Stack
+
+| Tier | Component | Technology | Version | Rationale |
+|---|---|---|---|---|
+| **Frontend** | Framework | React | 18.3+ | Component-driven UI with predictable state management. |
+| | Language | TypeScript | 5.5+ | Full static typing shared with backend API schemas. |
+| | Styling | Tailwind CSS | 3.4+ | Utility-first police dark/light workstation styling. |
+| | Visualization | Cytoscape.js | 3.30+ | High-performance graph canvas with directed layouts. |
+| | Icons | Lucide React | 0.446+ | Clean, consistent UI iconography. |
+| **Backend** | API Framework | FastAPI | 0.115+ | High-throughput asynchronous REST API with OpenAPI documentation. |
+| | Language | Python | 3.12+ | Rich ecosystem for graph analysis, math, and report generation. |
+| | Validation | Pydantic | v2 | Strict request/response schema parsing and input bounds checks. |
+| | ORM | SQLAlchemy | 2.0 (asyncpg) | Asynchronous relational persistence with asyncpg driver. |
+| | Graph Engine | NetworkX | 3.3+ | Deterministic in-memory graph algorithms and BFS traversal. |
+| | PDF Generation | ReportLab | 4.2+ | Programmatic, pixel-precise legal PDF document compilation. |
+| **Data & Infra** | Database | PostgreSQL | 16-alpine | ACID-compliant persistence for cases, traces, evidence, and audit logs. |
+| | Caching | Redis | 7-alpine | In-memory cache for API responses and traversal deduplication. |
+| | Containerization | Docker Compose | 2.20+ | Multi-service orchestration for reliable, one-command deployment. |
