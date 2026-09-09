@@ -22,6 +22,7 @@ import { GraphDetailDrawer } from '../graph/GraphDetailDrawer';
 import { PruningDrawer } from '../graph/PruningDrawer';
 import { TraceLauncherModal } from '../graph/TraceLauncherModal';
 import { EvidenceWorkstation } from '../evidence/EvidenceWorkstation';
+import { ReportExportModal } from '../reports/ReportExportModal';
 
 interface CaseDetailsViewProps {
   caseId: string;
@@ -42,6 +43,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   const [isPruningOpen, setIsPruningOpen] = useState(false);
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const [showCaseMetadata, setShowCaseMetadata] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Workstation Mode
   const [activeTab, setActiveTab] = useState<'graph' | 'evidence'>('graph');
@@ -179,6 +181,14 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
             <FileText className="h-3.5 w-3.5 text-amber-400" />
             <span>{showCaseMetadata ? 'Hide Case Details' : 'View Case Details'}</span>
             {showCaseMetadata ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-police-800 hover:bg-police-700 border border-police-700 text-xs font-medium text-slate-300 hover:text-white transition cursor-pointer"
+          >
+            <FileText className="h-3.5 w-3.5 text-blue-400" />
+            <span>Generate Reports & Legal Notice</span>
           </button>
 
           <button
@@ -405,6 +415,16 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
         defaultWallet={caseData.suspect_wallet}
         onTraceStarted={handleTraceStarted}
         startTraceFn={startTrace}
+      />
+
+      {/* Forensic Report & Legal Notice Generator Modal */}
+      <ReportExportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        caseId={caseData.id}
+        traceId={selectedTraceId}
+        firNumber={caseData.fir_number}
+        suspectWallet={caseData.suspect_wallet}
       />
     </div>
   );

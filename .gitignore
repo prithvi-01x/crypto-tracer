@@ -29,6 +29,8 @@ dist/
 .idea/
 *.swp
 
-# Docker volumes
+# Docker volumes & local data
 postgres_data/
 redis_data/
+data/
+*.pdf
