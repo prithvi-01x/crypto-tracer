@@ -246,3 +246,25 @@ The system strictly categorizes all investigative items into four standardized l
 
 ### Parent Provenance Linkage
 Every derived or inferred record contains a `parent_evidence_ids` array referencing the specific upstream evidence IDs from which it was computed. This enables complete bidirectional traceability: any conclusion can be traced back to the underlying on-chain transactions.
+
+---
+
+## Cryptographic Verification: RFC-8785 & SHA-256
+
+To satisfy electronic record admissibility standards under Section 63 BSA, forensic software must prove that digital records have not been altered in transit or persistence.
+
+### The JSON Serialization Problem
+Standard JSON serializers (Python `json.dumps`, JavaScript `JSON.stringify`) produce non-deterministic output depending on dictionary key ordering, whitespace indentation, and floating-point representations. Hashing non-standardized JSON produces different SHA-256 hashes for identical logical data.
+
+### RFC-8785 Canonicalization Standard
+Crypto-Tracer implements RFC-8785 (JSON Canonicalization Scheme / JCS) across all evidence generation:
+- Dictionary keys are lexicographically sorted by Unicode code point.
+- Whitespace between structural tokens is strictly eliminated.
+- Numbers are serialized per ECMAScript / IEEE-754 specifications without trailing zeros.
+- Character strings are uniformly UTF-8 encoded.
+
+Each evidence payload is canonicalized before its SHA-256 hash is computed:
+
+$$\text{Content Hash} = \text{SHA-256}(\text{RFC-8785}(\text{Payload}))$$
+
+All generated hashes are 64-character lowercase hexadecimal strings. Empty-string SHA-256 hashes (`e3b0c442...`) are rejected by backend validation gates.
