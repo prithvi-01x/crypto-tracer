@@ -122,7 +122,7 @@ export default function App() {
                   SIH 2026 #SIH26182
                 </span>
                 <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded">
-                  PHASE 10: DEMO RELIABILITY
+                  PHASE 11: HARDENED PROTOTYPE
                 </span>
               </div>
               <p className="text-xs text-slate-400">
