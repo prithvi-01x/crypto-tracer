@@ -268,3 +268,36 @@ Each evidence payload is canonicalized before its SHA-256 hash is computed:
 $$\text{Content Hash} = \text{SHA-256}(\text{RFC-8785}(\text{Payload}))$$
 
 All generated hashes are 64-character lowercase hexadecimal strings. Empty-string SHA-256 hashes (`e3b0c442...`) are rejected by backend validation gates.
+
+---
+
+## Legal Reporting Workflow
+
+Crypto-Tracer bridges technical blockchain forensics and formal Indian criminal procedure through automated document generation:
+
+```
+[Attribution Established] 
+        │
+        ▼
+[Investigator Review & Confirmation]
+        │
+        ├─────────────────────────────────────────────────┐
+        ▼                                                 ▼
+[Generate Section 63 BSA Dossier]        [Generate Section 94 BNSS Notice]
+  • Case Details & FIR Metadata            • Addressed to VASP Legal Desk
+  • Visual Graph Traversal Snapshot        • Target Deposit Wallet Specified
+  • Multi-Hop Transaction Ledger           • Statutory Directive to Produce:
+  • Cryptographic Evidence Hash Chains       - KYC Identity Documents
+  • Section 63 Admissibility Certificate     - Linked Bank Accounts / UPI IDs
+                                             - IP Login Telemetry
+        │                                                 │
+        ▼                                                 ▼
+[Officer Signature & Official Seal]      [Officer Signature & Official Seal]
+        │                                                 │
+        ▼                                                 ▼
+[Court Submission / Case Diary]          [Dispatch to Exchange Legal Team]
+```
+
+### Document Outputs
+1. **Complete Evidence Dossier (PDF):** A multi-page forensic document containing executive summaries, multi-hop flow charts, transaction tables, and the complete Section 63 BSA certification certificate.
+2. **Draft Section 94 BNSS Order (PDF):** A formal police directive ready for investigating officer review, requiring the exchange to freeze the target account and produce KYC records within 24–48 hours.
