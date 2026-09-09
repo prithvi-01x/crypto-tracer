@@ -564,3 +564,32 @@ docker compose down
 # Clean teardown including database volumes
 docker compose down -v
 ```
+
+---
+
+## Canonical SIH 2026 Demo Walkthrough
+
+Crypto-Tracer includes a deterministic evaluation scenario modeled on real-world cybercrime task fraud:
+
+### Scenario Metadata
+- **FIR Number:** `FIR-2026-DEL-CY-0812`
+- **Complainant / Victim:** `Ramesh Kumar (Telegram Task-Based Investment Scam)`
+- **Defrauded Amount:** `₹50,00,000` (`60,002 USDT` equivalent)
+- **Suspect Root Wallet:** `TSuspectScamRootWallet111111111111`
+- **Target Network:** TRON Mainnet (TRC-20 USDT)
+- **Attributed Candidate Wallet:** `TBinanceUserDepositCandidate333333`
+- **Attributed VASP:** `Binance`
+- **Confidence Score:** `81.6%` (HIGH Confidence)
+
+### Walkthrough Steps via UI
+1. **Seed Demo Case:** On the Case Register screen (`http://localhost:5173`), click the **"Demo Seed"** button. The backend populates case `00000000-0000-0000-0000-000000000812` with 9 nodes, 8 edges, and 59 cryptographic evidence items in ~12 milliseconds.
+2. **Open Case Workspace:** Click **"Open Workspace"** on the `FIR-2026-DEL-CY-0812` row. Observe the top Case Context Strip dynamically rendering FIR number, victim reference, loss amount (₹50,00,000), and token standard.
+3. **Explore Transaction Graph:** Under the **"Trace Graph"** tab, inspect the multi-hop fund flow from the suspect root through layering mules into the intermediate deposit candidate. Click on any node to view real-time address metrics and transfer histories.
+4. **Inspect VASP Attribution:** Switch to the **"VASP Attribution"** tab. Observe the explainable 4-factor breakdown:
+   - Cluster / Deposit Pattern: $0.800 \times 0.35 = 0.280$
+   - Gas Funding & Flow Path: $1.000 \times 0.35 = 0.350$
+   - Sweep Cadence & Timing: $0.300 \times 0.15 = 0.045$
+   - Off-Ramp / Hot-Wallet: $0.943 \times 0.15 = 0.141$
+   - Total Confidence Score: **81.6%** (HIGH)
+5. **Audit Evidence Vault:** Switch to the **"Evidence Vault"** tab. Click multiple evidence rows to inspect live SHA-256 content hashes, RFC-8785 canonical JSON payloads, and parent provenance linkages.
+6. **Generate Legal Deliverables:** Under **"Reports & Legal Draft"**, click **"Generate Evidence Dossier"** and **"Draft Section 94 BNSS Request"**. Click the download buttons to inspect the generated PDF files.
