@@ -26,8 +26,19 @@ class VASPRegistry:
         return self._registry.get(normalized_addr)
 
     def is_known_vasp(self, address: str) -> bool:
-        """Check if an address is recorded in the VASP registry."""
-        return address.strip() in self._registry
+        """Check if an address is recorded in the VASP registry as an exchange/custodian."""
+        entry = self._registry.get(address.strip())
+        return entry is not None and entry.address_type not in ("mixer", "bridge")
+
+    def is_mixer(self, address: str) -> bool:
+        """Check if an address is recorded as a privacy mixer / tumbler obfuscation service."""
+        entry = self._registry.get(address.strip())
+        return entry is not None and entry.address_type == "mixer"
+
+    def is_bridge(self, address: str) -> bool:
+        """Check if an address is recorded as a cross-chain liquidity bridge gateway."""
+        entry = self._registry.get(address.strip())
+        return entry is not None and entry.address_type == "bridge"
 
     def list_all(self) -> List[VASPEntry]:
         """Return all registered VASP entities."""
@@ -158,6 +169,54 @@ class VASPRegistry:
                 verification_status="HEURISTIC",
                 version=self.VERSION,
                 description="Unconfirmed community tag for Bitfinex liquidity pool",
+            ),
+
+            # High-Risk Obfuscation Services (Mixers / Tumblers)
+            VASPEntry(
+                vasp_id="tornado_cash_tron",
+                entity_name="Tornado Cash (TRON Mirror / Obfuscator)",
+                chain="TRON",
+                address="TTornadoCashTronMockMixer1111111",
+                address_type="mixer",
+                source="ofac_sdn_list_and_forensic_cluster",
+                verification_status="VERIFIED",
+                version=self.VERSION,
+                description="Decentralized privacy mixer pool. Multi-party zero-knowledge tumbler.",
+            ),
+            VASPEntry(
+                vasp_id="chipmixer_tron",
+                entity_name="ChipMixer Obfuscation Cluster",
+                chain="TRON",
+                address="TChipMixerObfuscationNode99999999",
+                address_type="mixer",
+                source="interpol_cybercrime_bulletin",
+                verification_status="VERIFIED",
+                version=self.VERSION,
+                description="High-risk centralized fund tumbler pool.",
+            ),
+
+            # Cross-Chain Bridges (Terminal single-chain boundaries)
+            VASPEntry(
+                vasp_id="allbridge_tron",
+                entity_name="Allbridge Cross-Chain Gateway",
+                chain="TRON",
+                address="TAllbridgeCrossChainGateway11111",
+                address_type="bridge",
+                source="allbridge_official_contracts",
+                verification_status="VERIFIED",
+                version=self.VERSION,
+                description="TRON cross-chain liquidity bridge lock/mint vault.",
+            ),
+            VASPEntry(
+                vasp_id="bttc_bridge",
+                entity_name="BitTorrent Chain (BTTC) Bridge",
+                chain="TRON",
+                address="TBTTCBridgeGatewayTRON2222222222",
+                address_type="bridge",
+                source="bttc_official_bridge",
+                verification_status="VERIFIED",
+                version=self.VERSION,
+                description="TRON-to-BTTC cross-chain bridge gateway contract.",
             ),
         ]
 
