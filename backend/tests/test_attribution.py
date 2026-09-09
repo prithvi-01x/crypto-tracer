@@ -121,7 +121,7 @@ def test_sweep_analyzer_calculations():
     assert res.destination_verified is True
     assert res.is_sweep is True
     assert res.is_strong_sweep is True
-    assert res.score == 1.0  # ratio >= 0.90 into verified VASP -> score 1.0
+    assert res.score == 1.0  # ratio >= 0.90 with dominant concentration >= 0.85 -> score 1.0
 
 
 def test_sweep_analyzer_no_sweep_and_partial_sweep():
@@ -153,7 +153,6 @@ def test_fan_in_analyzer():
     now = datetime.now(timezone.utc)
     dest_wallet = BINANCE_HOT
 
-    # Create 5 distinct senders depositing into dest_wallet
     edges = []
     nodes = [make_graph_node(dest_wallet, node_type="endpoint", hop=2)]
     for i in range(5):
@@ -210,7 +209,8 @@ def test_temporal_analyzer_exponential_decay():
 
 def test_attribution_engine_composite_score_exact_formula():
     """
-    Verify: confidence = 0.35 * direct_tag + 0.35 * sweep + 0.15 * fan_in + 0.15 * temporal
+    Verify: confidence = 0.35 * effective_entity_tag + 0.35 * sweep + 0.15 * fan_in + 0.15 * temporal
+    where effective_entity_tag = direct_tag (if directly tagged) else 0.80 * downstream_vasp_match.
     """
     engine = AttributionEngine(registry=default_registry)
     now = datetime.now(timezone.utc)
@@ -240,10 +240,14 @@ def test_attribution_engine_composite_score_exact_formula():
     best = report.best_candidate
     assert best is not None
 
-    # Check formula components
     f = best.factors
+    # deposit_cand is not directly tagged:
+    assert f.direct_tag == 0.0
+    assert f.downstream_vasp_match == 1.0
+
+    effective_entity_tag = 0.80 * f.downstream_vasp_match
     expected_confidence = round(
-        0.35 * f.direct_tag + 0.35 * f.sweep + 0.15 * f.fan_in + 0.15 * f.temporal,
+        0.35 * effective_entity_tag + 0.35 * f.sweep + 0.15 * f.fan_in + 0.15 * f.temporal,
         4
     )
     assert best.confidence == expected_confidence
@@ -257,13 +261,13 @@ def test_attribution_engine_composite_score_exact_formula():
     assert best.confidence_band in ["VERY HIGH", "HIGH", "MODERATE", "LOW"]
 
 
-def test_attribution_direct_verified_vasp():
+def test_direct_verified_address():
     """
-    Direct match to Binance hot wallet should score direct_tag = 1.0.
+    1. A true direct_tag must mean the candidate address itself is directly present in the verified VASP registry.
     """
-    engine = AttributionEngine()
+    engine = AttributionEngine(registry=default_registry)
     now = datetime.now(timezone.utc)
-    suspect = "TSuspectRoot00000000000000000000000"
+    suspect = "TSuspectRootDirectTag00000000000000"
     binance_hot = BINANCE_HOT
 
     edges = [
@@ -280,9 +284,193 @@ def test_attribution_direct_verified_vasp():
     assert best is not None
     assert best.candidate_address == binance_hot
     assert best.vasp_id == "binance"
+    # True direct tag
     assert best.factors.direct_tag == 1.0
+    assert best.factors.downstream_vasp_match == 0.0
     assert best.verification_status == "VERIFIED"
-    assert any("Direct tag match" in ep for ep in best.evidence_bullet_points)
+    assert "Direct tag match: Wallet is a verified hot_wallet belonging to Binance" in best.explanations.direct_tag
+    assert "N/A" in best.explanations.downstream_vasp_match
+    assert any("Direct tag evidence" in ep for ep in best.evidence_bullet_points)
+
+
+def test_downstream_only_vasp_match():
+    """
+    Candidate is not directly tagged and sends funds to Binance, but does NOT perform a sweep consolidation.
+    direct_tag == 0.0, downstream_vasp_match == 1.0, sweep == 0.0.
+    """
+    engine = AttributionEngine(registry=default_registry)
+    now = datetime.now(timezone.utc)
+    cand_intermediate = "TUntaggedIntermediateDownstreamOnly1"
+    suspect = "TSuspectSender00000000000000000000"
+    binance = BINANCE_HOT
+
+    # Received $50,000, but only forwarded $500 to Binance (sweep ratio 0.01 < 0.20 -> sweep = 0.0)
+    edges = [
+        make_graph_edge("e1", "tx_in", suspect, cand_intermediate, 50000.00, now, hop=1),
+        make_graph_edge("e2", "tx_out_tiny", cand_intermediate, binance, 500.00, now + timedelta(hours=2), hop=2),
+    ]
+    nodes = [
+        make_graph_node(suspect, node_type="suspect", hop=0, total_sent=50000.00),
+        make_graph_node(cand_intermediate, node_type="intermediate", hop=1, total_received=50000.00, total_sent=500.00),
+        make_graph_node(binance, node_type="endpoint", hop=2, total_received=500.00),
+    ]
+    graph = InvestigationGraph(nodes=nodes, edges=edges)
+
+    report = engine.evaluate_trace("trace_downstream_only", graph)
+    cand = next(c for c in report.candidates if c.candidate_address == cand_intermediate)
+
+    # Must NOT have direct tag
+    assert cand.factors.direct_tag == 0.0
+    assert "not directly tagged" in cand.explanations.direct_tag
+
+    # Has downstream match to verified Binance
+    assert cand.factors.downstream_vasp_match == 1.0
+    assert cand.explanations.downstream_vasp_match == "This candidate is not directly tagged; its funds sweep into a verified Binance wallet."
+
+    # Sweep score must be 0.0
+    assert cand.factors.sweep == 0.0
+
+    # Overall confidence must remain LOW because there was no sweep consolidation
+    assert cand.confidence < 0.50
+    assert cand.confidence_band == "LOW"
+
+
+def test_downstream_match_plus_sweep():
+    """
+    Candidate is not directly tagged; its funds sweep 99% into a verified Binance hot wallet.
+    direct_tag == 0.0, downstream_vasp_match == 1.0, sweep == 1.0.
+    """
+    engine = AttributionEngine(registry=default_registry)
+    now = datetime.now(timezone.utc)
+    cand_intermediate = "TUntaggedIntermediateSweeper111111"
+    suspect = "TSuspectSender00000000000000000000"
+    binance = BINANCE_HOT
+
+    edges = [
+        make_graph_edge("e1", "tx_in", suspect, cand_intermediate, 20000.00, now, hop=1),
+        make_graph_edge("e2", "tx_sweep", cand_intermediate, binance, 19800.00, now + timedelta(minutes=15), hop=2),
+    ]
+    nodes = [
+        make_graph_node(suspect, node_type="suspect", hop=0, total_sent=20000.00),
+        make_graph_node(cand_intermediate, node_type="intermediate", hop=1, total_received=20000.00, total_sent=19800.00),
+        make_graph_node(binance, node_type="endpoint", hop=2, total_received=19800.00),
+    ]
+    graph = InvestigationGraph(nodes=nodes, edges=edges)
+
+    report = engine.evaluate_trace("trace_sweep_match", graph)
+    cand = next(c for c in report.candidates if c.candidate_address == cand_intermediate)
+
+    # 1. No direct tag
+    assert cand.factors.direct_tag == 0.0
+    assert cand.explanations.direct_tag == "This candidate is not directly tagged in the VASP registry."
+
+    # 2. Downstream match
+    assert cand.factors.downstream_vasp_match == 1.0
+    assert cand.explanations.downstream_vasp_match == "This candidate is not directly tagged; its funds sweep into a verified Binance wallet."
+
+    # 3. Sweep score is 1.0
+    assert cand.factors.sweep == 1.0
+
+    # 4. High overall confidence
+    assert cand.confidence >= 0.75
+    assert cand.confidence_band in ["HIGH", "VERY HIGH"]
+
+    # 5. Evidence list has Downstream VASP match and Sweep consolidation, NOT Direct tag evidence
+    assert any("Downstream VASP match: This candidate is not directly tagged; its funds sweep into a verified Binance wallet." in ep for ep in cand.evidence_bullet_points)
+    assert any("Sweep consolidation" in ep for ep in cand.evidence_bullet_points)
+    assert not any("Direct tag evidence" in ep for ep in cand.evidence_bullet_points)
+
+
+def test_no_direct_tag():
+    """
+    Verify that an untagged address NEVER receives a direct_tag > 0.0.
+    """
+    engine = AttributionEngine(registry=default_registry)
+    now = datetime.now(timezone.utc)
+    untagged_addr = "TRandomUntaggedWalletAddress999999"
+
+    # Untagged address receives and sweeps
+    edges = [
+        make_graph_edge("e1", "tx_in", "TSender", untagged_addr, 10000.00, now, hop=1),
+        make_graph_edge("e2", "tx_out", untagged_addr, BINANCE_HOT, 9900.00, now + timedelta(minutes=10), hop=2),
+    ]
+    nodes = [
+        make_graph_node("TSender", node_type="suspect", hop=0, total_sent=10000.00),
+        make_graph_node(untagged_addr, node_type="intermediate", hop=1, total_received=10000.00, total_sent=9900.00),
+        make_graph_node(BINANCE_HOT, node_type="endpoint", hop=2, total_received=9900.00),
+    ]
+    graph = InvestigationGraph(nodes=nodes, edges=edges)
+
+    report = engine.evaluate_trace("trace_no_direct", graph)
+    cand = next(c for c in report.candidates if c.candidate_address == untagged_addr)
+
+    assert cand.factors.direct_tag == 0.0
+    assert cand.explanations.direct_tag == "This candidate is not directly tagged in the VASP registry."
+
+
+def test_no_double_counting():
+    """
+    Verify that sweep mechanics and downstream VASP identity are strictly decoupled:
+    - Sweep score evaluates ONLY the transaction consolidation mechanics (ratio & concentration).
+    - Destination identity evaluates ONLY in downstream_vasp_match.
+    """
+    sweep_analyzer = SweepAnalyzer(registry=default_registry)
+    engine = AttributionEngine(registry=default_registry)
+    now = datetime.now(timezone.utc)
+
+    # Graph A: Sweeps 99% to verified Binance hot wallet
+    cand_a = "TCandidateSweeperToBinance1111111"
+    edges_a = [
+        make_graph_edge("ea1", "tx_in_a", "TSuspect", cand_a, 10000.00, now, hop=1),
+        make_graph_edge("ea2", "tx_out_a", cand_a, BINANCE_HOT, 9900.00, now + timedelta(minutes=15), hop=2),
+    ]
+    nodes_a = [
+        make_graph_node("TSuspect", node_type="suspect", hop=0, total_sent=10000.00),
+        make_graph_node(cand_a, node_type="intermediate", hop=1, total_received=10000.00, total_sent=9900.00),
+        make_graph_node(BINANCE_HOT, node_type="endpoint", hop=2, total_received=9900.00),
+    ]
+    graph_a = InvestigationGraph(nodes=nodes_a, edges=edges_a)
+
+    # Graph B: Identical sweep of 99%, but to an unknown untagged address
+    cand_b = "TCandidateSweeperToUnknown2222222"
+    unknown_dest = "TUnknownDestinationWallet77777777"
+    edges_b = [
+        make_graph_edge("eb1", "tx_in_b", "TSuspect", cand_b, 10000.00, now, hop=1),
+        make_graph_edge("eb2", "tx_out_b", cand_b, unknown_dest, 9900.00, now + timedelta(minutes=15), hop=2),
+    ]
+    nodes_b = [
+        make_graph_node("TSuspect", node_type="suspect", hop=0, total_sent=10000.00),
+        make_graph_node(cand_b, node_type="intermediate", hop=1, total_received=10000.00, total_sent=9900.00),
+        make_graph_node(unknown_dest, node_type="endpoint", hop=2, total_received=9900.00),
+    ]
+    graph_b = InvestigationGraph(nodes=nodes_b, edges=edges_b)
+
+    # 1. Assert Pure Sweep Analyzer scores are identical (NO double counting in sweep)
+    res_a = sweep_analyzer.analyze(cand_a, graph_a)
+    res_b = sweep_analyzer.analyze(cand_b, graph_b)
+    assert res_a.score == res_b.score == 1.0
+
+    # 2. Assert Attribution Engine evaluates factors cleanly
+    report_a = engine.evaluate_trace("trace_a", graph_a)
+    report_b = engine.evaluate_trace("trace_b", graph_b)
+
+    cand_res_a = next(c for c in report_a.candidates if c.candidate_address == cand_a)
+    cand_res_b = next(c for c in report_b.candidates if c.candidate_address == cand_b)
+
+    # Both have direct_tag == 0.0
+    assert cand_res_a.factors.direct_tag == 0.0
+    assert cand_res_b.factors.direct_tag == 0.0
+
+    # Sweep scores are identical
+    assert cand_res_a.factors.sweep == cand_res_b.factors.sweep == 1.0
+
+    # Destination VASP matches correctly differ
+    assert cand_res_a.factors.downstream_vasp_match == 1.0
+    assert cand_res_b.factors.downstream_vasp_match == 0.0
+
+    # The difference in confidence score is exactly the entity tag weight: 0.35 * 0.80 * 1.0 = 0.28
+    diff = cand_res_a.confidence - cand_res_b.confidence
+    assert round(diff, 4) == round(0.35 * 0.80 * 1.0, 4)
 
 
 def test_attribution_low_confidence_unidentified():
@@ -308,6 +496,8 @@ def test_attribution_low_confidence_unidentified():
     assert best is not None
     assert best.vasp_id == "unknown_entity"
     assert best.verification_status == "UNVERIFIED"
+    assert best.factors.direct_tag == 0.0
+    assert best.factors.downstream_vasp_match == 0.0
     assert best.confidence < 0.50
     assert best.confidence_band == "LOW"
 
@@ -371,7 +561,6 @@ async def test_attribution_api_and_persistence(async_client: AsyncClient, test_e
     assert case_res.status_code == 201
     case_id = case_res.json()["id"]
 
-    # Directly insert a completed trace with graph_data into the test database
     from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
     session_factory = async_sessionmaker(bind=test_engine, class_=AsyncSession, expire_on_commit=False)
     async with session_factory() as session:
@@ -403,11 +592,14 @@ async def test_attribution_api_and_persistence(async_client: AsyncClient, test_e
     best = data["best_candidate"]
     assert best is not None
     assert "Binance" in best["vasp"] or "binance" in best["vasp_id"]
-    assert best["confidence"] > 0.80
+    assert best["confidence"] > 0.75
     assert best["confidence_band"] in ["HIGH", "VERY HIGH"]
-    assert best["factors"]["direct_tag"] > 0.0
-    assert best["factors"]["sweep"] > 0.0
+    # Intermediate wallet has direct_tag == 0.0 and downstream_vasp_match == 1.0
+    assert best["factors"]["direct_tag"] == 0.0
+    assert best["factors"]["downstream_vasp_match"] == 1.0
+    assert best["factors"]["sweep"] == 1.0
     assert len(best["evidence_bullet_points"]) > 0
+    assert any("Downstream VASP match: This candidate is not directly tagged; its funds sweep into a verified Binance wallet." in ep for ep in best["evidence_bullet_points"])
 
     # 3. Verify persistence in PostgreSQL / test DB
     async with session_factory() as session:
@@ -417,6 +609,8 @@ async def test_attribution_api_and_persistence(async_client: AsyncClient, test_e
         assert float(top_db.confidence) == best["confidence"]
         assert top_db.confidence_band == best["confidence_band"]
         assert top_db.vasp_id == best["vasp_id"]
+        assert float(top_db.direct_tag_score) == 0.0
+        assert float(top_db.downstream_match_score) == 1.0
 
 
 @pytest.mark.asyncio
