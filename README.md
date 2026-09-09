@@ -148,3 +148,20 @@ The core traversal engine expands transaction paths from suspect wallets using a
 - **Graph Representation:** Directed multigraph $G = (V, E)$ where vertices $V$ represent unhosted wallets, smart contracts, or VASP clusters, and directed edges $E$ represent confirmed on-chain TRC-20 token transfers.
 - **Cycle & Re-entry Detection:** The engine tracks visited wallet addresses per path to detect circular layering loops (where funds are circulated between mule wallets to artificially simulate legitimate trading activity).
 - **Sub-Second Performance:** In benchmark evaluations on 4-hop layering networks with 50+ transfers, graph generation completes in 12–25 milliseconds.
+
+---
+
+## Relevance Pruning & Noise Reduction
+
+Illicit syndicates deliberately pollute transaction histories with dozens of micro-value transactions (dusting attacks and micro-splits) to evade automated analysis. Unfiltered graph visualizations rapidly become illegible "hairballs" containing hundreds of irrelevant nodes.
+
+### Dual-Threshold Pruning Criteria
+Crypto-Tracer applies an automated, dual-criteria pruning filter:
+1. **Absolute Dust Threshold:** Any outgoing transfer with a value below a configurable threshold (default: $100.00 USDT) is flagged as secondary dust.
+2. **Relative Volume Threshold:** Any outgoing transfer carrying less than 10% of the total incoming funds received by that wallet is categorized as operational noise or gas fee slippage.
+
+### Conservation of Funds Accounting
+Pruning does not mean data loss. Pruned transfers are retained in the database and audit trail:
+- The graph canvas collapses pruned branches into a summary metric (`pruned_transfers_count`, `pruned_volume_usd`).
+- Investigators can open the Pruning Drawer at any time to inspect all filtered micro-transfers.
+- Total input volume equals total retained volume plus total pruned volume, ensuring full financial reconciliation.
