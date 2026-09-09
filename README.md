@@ -59,3 +59,47 @@ Crypto-Tracer is purpose-built for law enforcement personnel and financial crime
 - **Supervisory Law Enforcement Officers:** Senior officers reviewing evidence dossiers and authorizing statutory production notices under Section 94 BNSS prior to formal dispatch to exchange legal compliance desks.
 
 > **Operational Scope Note:** Crypto-Tracer is an investigative intelligence and decision-support workstation. It generates verifiable evidentiary trails and draft legal notices to accelerate lawful investigation. The system does not autonomously freeze accounts, execute financial transactions, or bypass judicial or police oversight.
+
+---
+
+## End-to-End Investigation Workflow
+
+The platform implements an integrated 9-stage investigative pipeline:
+
+```
+[Case Registration] 
+        │
+        ▼
+[Root Suspect Ingestion] (Wallet Address / Tx Hash)
+        │
+        ▼
+[Multi-Hop BFS Traversal] (TRC-20 USDT Transfer Events)
+        │
+        ▼
+[Relevance Pruning] (Dust Threshold & Volume Ratio Filtering)
+        │
+        ▼
+[Interactive Graph Canvas] (Visual Flow Exploration & Node Inspection)
+        │
+        ▼
+[VASP Attribution Engine] (Multi-Factor Heuristic Scoring)
+        │
+        ▼
+[Cryptographic Evidence DAG] (RFC-8785 Canonical JSON & SHA-256 Hashes)
+        │
+        ▼
+[Investigator Review] (Officer Verification & Hypothesis Acceptance)
+        │
+        ▼
+[Statutory Document Generation] (Section 63 BSA Dossier & Section 94 BNSS Order)
+```
+
+1. **Case Registration:** The investigator inputs formal incident metadata (FIR number, complainant details, reported loss amount in INR and USDT equivalent).
+2. **Suspect Ingestion:** The initial fraudulent receiving wallet address or transaction ID is ingested as the root suspect node.
+3. **Multi-Hop Traversal:** The traversal engine queries on-chain TRC-20 transfer logs, expanding outbound fund paths hop-by-hop.
+4. **Relevance Pruning:** Automated pruning algorithms filter out noise while recording pruned volume in the case ledger.
+5. **Graph Visualization:** The transaction topology is rendered on an interactive Cytoscape.js canvas with hop levels, node types, and edge amounts.
+6. **VASP Attribution:** Downstream endpoints are evaluated against direct registry tags and indirect sweep patterns to identify candidate exchange deposit addresses.
+7. **Evidence Provenance:** Every fact and metric is logged as an immutable evidence record with cryptographic parent linkages.
+8. **Investigator Review:** The investigator inspects individual signals and formally reviews the attribution hypothesis.
+9. **Legal Drafting:** The system compiles the complete Section 63 BSA Evidence Dossier PDF and Section 94 BNSS Legal Production Notice PDF.
