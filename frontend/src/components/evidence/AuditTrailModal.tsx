@@ -212,7 +212,7 @@ export const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-police-800 bg-police-950/60 flex items-center justify-between text-xs text-slate-400">
-          <span>All recorded actions comply with Indian Evidence Act & Section 63 BNSS electronic record requirements.</span>
+          <span>All recorded actions comply with Section 63 BSA electronic record & Section 94 BNSS legal audit requirements.</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-police-800 hover:bg-police-700 text-slate-200 font-medium transition"

@@ -373,7 +373,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
           <ShieldCheck className="h-4 w-4 text-emerald-400" />
           <span>Evidence & Provenance</span>
           <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-police-950/80 text-slate-300 border border-police-750">
-            Section 63 BNSS
+            Section 63 BSA
           </span>
         </button>
       </div>

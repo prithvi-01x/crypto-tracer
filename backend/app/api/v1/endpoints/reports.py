@@ -44,7 +44,7 @@ async def generate_evidence_dossier(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Generate an official Forensic Evidence Dossier PDF complying with Section 63 BSA / BNSS.
+    Generate an official Forensic Evidence Dossier PDF complying with Section 63 BSA electronic evidence standards.
     Embeds multi-hop graph snapshot, observed transaction records, derived metrics,
     accepted attribution hypothesis, and cryptographic SHA-256 integrity seal.
     """

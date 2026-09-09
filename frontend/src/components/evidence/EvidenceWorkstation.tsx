@@ -138,7 +138,7 @@ export const EvidenceWorkstation: React.FC<EvidenceWorkstationProps> = ({
 
       setReviewFeedback({
         type: 'success',
-        message: `Attribution hypothesis successfully ${decision === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED'}. Cryptographic audit log & Section 63 BNSS electronic record updated.`,
+        message: `Attribution hypothesis successfully ${decision === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED'}. Cryptographic audit log & Section 63 BSA electronic record updated.`,
       });
       setReviewNotes('');
       // Reload evidence chain to reflect newly created HUMAN_ACTION item
@@ -380,7 +380,7 @@ export const EvidenceWorkstation: React.FC<EvidenceWorkstationProps> = ({
                 </div>
                 <div className="md:col-span-3">
                   <label className="text-[10px] text-slate-400 uppercase font-semibold block mb-1">
-                    Evidentiary Justification & Case Notes (Section 63 BNSS)
+                    Evidentiary Justification & Case Notes (Section 63 BSA)
                   </label>
                   <input
                     type="text"

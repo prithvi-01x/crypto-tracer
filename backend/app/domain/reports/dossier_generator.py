@@ -53,7 +53,7 @@ class NumberedCanvas(canvas.Canvas):
 
         # Running header (pages > 1)
         if self._pageNumber > 1:
-            self.drawString(40, 762, "CRYPTO-TRACER FORENSIC EVIDENCE DOSSIER — SECTION 63 BNSS")
+            self.drawString(40, 762, "CRYPTO-TRACER FORENSIC EVIDENCE DOSSIER — SECTION 63 BSA")
             self.drawRightString(572, 762, f"CONFIDENTIAL // LAW ENFORCEMENT ONLY")
             self.setStrokeColor(colors.HexColor("#CBD5E1"))
             self.setLineWidth(0.5)
