@@ -351,3 +351,44 @@ Crypto-Tracer strictly adheres to the updated Indian criminal jurisprudence enac
 │     notices must be signed and served through official police channels.     │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## System Architecture
+
+Crypto-Tracer is implemented as a modular layered monolith, prioritizing rapid deployment, reproducible execution, and reliable offline demonstration:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             PRESENTATION LAYER                              │
+│         React 18 SPA • TypeScript • Tailwind CSS • Cytoscape.js            │
+│  [Case Register]   [Forensic Graph]   [VASP Attribution]   [Evidence Vault] │
+└───────────────────────────────────────┬─────────────────────────────────────┘
+                                        │ HTTP / JSON (REST API)
+                                        ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                               API & APP LAYER                               │
+│                   FastAPI (Python 3.12+) • Pydantic v2                      │
+│      [Router] ──► [Dependency Injection] ──► [Input Validation / Bounds]   │
+└───────────────────────────────────────┬─────────────────────────────────────┘
+                                        │
+                                        ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             CORE DOMAIN ENGINES                             │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐                   │
+│  │     Traversal Engine    │  │   Attribution Engine    │                   │
+│  │   Multi-Hop BFS, DiGraph│  │   4-Factor Sweep Math   │                   │
+│  └─────────────────────────┘  └─────────────────────────┘                   │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐                   │
+│  │      Evidence Engine    │  │      Legal PDF Engine   │                   │
+│  │   RFC-8785, SHA-256 DAG │  │   BSA 63 & BNSS 94 Docs │                   │
+│  └─────────────────────────┘  └─────────────────────────┘                   │
+└───────────────────────┬─────────────────────────────┬───────────────────────┘
+                        │                             │
+                        ▼                             ▼
+┌───────────────────────────────┐   ┌─────────────────────────────────────────┐
+│       PERSISTENCE LAYER       │   │        BLOCKCHAIN INGESTION LAYER       │
+│  PostgreSQL 16 (Relational DB)│   │  TronGrid HTTP API (Live Mainnet RPC)   │
+│  Redis 7 (Cache & Sessions)   │   │  Deterministic Fixtures (Demo Replay)   │
+└───────────────────────────────┘   └─────────────────────────────────────────┘
+```
