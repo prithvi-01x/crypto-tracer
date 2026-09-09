@@ -47,3 +47,15 @@ Crypto-Tracer replaces ad-hoc block explorer lookups with an integrated forensic
 - **Multi-Factor VASP Attribution Heuristics:** Evaluates candidate deposit addresses against exchange sweep consolidation ratios, fan-in convergence, and programmatic temporal delays to identify likely custodial endpoints.
 - **Cryptographic Evidence DAG:** Secures every observed transaction, derived metric, and attribution hypothesis into a tamper-evident Directed Acyclic Graph with RFC-8785 canonical JSON payloads and SHA-256 content hashes.
 - **Automated Statutory Legal Drafting:** Instantly generates court-admissible Section 63 BSA Evidence Dossiers and ready-to-serve Section 94 BNSS production orders for law enforcement officers.
+
+---
+
+## Intended Audience & Operational Context
+
+Crypto-Tracer is purpose-built for law enforcement personnel and financial crime specialists:
+
+- **Cybercrime Investigating Officers (IOs):** State police cyber cells and local cyber police stations handling 1930 portal complaints and formal First Information Reports (FIRs).
+- **Forensic Intelligence Analysts:** Technical analysts conducting complex multi-wallet flow analysis, fund layering reconstruction, and exchange cluster mapping.
+- **Supervisory Law Enforcement Officers:** Senior officers reviewing evidence dossiers and authorizing statutory production notices under Section 94 BNSS prior to formal dispatch to exchange legal compliance desks.
+
+> **Operational Scope Note:** Crypto-Tracer is an investigative intelligence and decision-support workstation. It generates verifiable evidentiary trails and draft legal notices to accelerate lawful investigation. The system does not autonomously freeze accounts, execute financial transactions, or bypass judicial or police oversight.
