@@ -60,6 +60,7 @@ export interface GraphMeta {
   boundary_reached?: string | null;
   is_partial?: boolean;
   investigator_explanation?: string | null;
+  execution_mode?: 'DEMO' | 'LIVE' | string;
 }
 
 export interface InvestigationGraph {
@@ -78,6 +79,7 @@ export interface TraceCreateInput {
   asset?: string;
   max_hops?: number;
   min_relevant_usd?: number;
+  execution_mode?: 'DEMO' | 'LIVE' | string;
 }
 
 export interface TraceStatus {
@@ -88,6 +90,7 @@ export interface TraceStatus {
   input_value: string;
   asset: string;
   max_hops: number;
+  execution_mode?: 'DEMO' | 'LIVE' | string;
   duration_ms?: number | null;
   node_count: number;
   edge_count: number;
@@ -102,4 +105,47 @@ export interface TraceStatus {
   is_partial?: boolean;
   started_at?: string | null;
   completed_at?: string | null;
+}
+
+export interface AttributionFactors {
+  direct_tag: number;
+  downstream_vasp_match: number;
+  sweep: number;
+  fan_in: number;
+  temporal: number;
+}
+
+export interface AttributionExplanations {
+  direct_tag: string;
+  downstream_vasp_match: string;
+  sweep: string;
+  fan_in: string;
+  temporal: string;
+}
+
+export interface CandidateAttribution {
+  candidate_address: string;
+  vasp: string;
+  vasp_name: string;
+  vasp_id: string;
+  hypothesis_label: string;
+  confidence: number;
+  confidence_percentage: number;
+  confidence_band: 'LOW' | 'MODERATE' | 'HIGH' | 'VERY HIGH' | string;
+  verification_status: string;
+  entity_category: string;
+  is_low_confidence: boolean;
+  factors: AttributionFactors;
+  explanations: AttributionExplanations;
+  evidence_bullet_points: string[];
+}
+
+export interface TraceAttributionReport {
+  trace_id: string;
+  engine_version: string;
+  disclaimer: string;
+  evaluated_at: string;
+  candidates: CandidateAttribution[];
+  best_candidate?: CandidateAttribution | null;
+  meta: Record<string, any>;
 }

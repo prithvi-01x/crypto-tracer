@@ -5,9 +5,14 @@ import {
   Filter, 
   Play, 
   Loader2, 
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  Zap,
+  Globe
 } from 'lucide-react';
 import type { TraceCreateInput } from '../../types/graph';
+
+const CANONICAL_DEMO_WALLET = 'TSuspectScamRootWallet111111111111';
 
 interface TraceLauncherModalProps {
   isOpen: boolean;
@@ -29,10 +34,18 @@ export const TraceLauncherModal: React.FC<TraceLauncherModalProps> = ({
   const [wallet, setWallet] = useState(defaultWallet || '');
   const [maxHops, setMaxHops] = useState<number>(4);
   const [minRelevantUsd, setMinRelevantUsd] = useState<number>(1.0);
+  const [executionMode, setExecutionMode] = useState<'DEMO' | 'LIVE'>('DEMO');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handleUseCanonicalDemo = () => {
+    setWallet(CANONICAL_DEMO_WALLET);
+    setMaxHops(4);
+    setMinRelevantUsd(1.0);
+    setExecutionMode('DEMO');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +66,7 @@ export const TraceLauncherModal: React.FC<TraceLauncherModalProps> = ({
         asset: 'TRC20:USDT',
         max_hops: maxHops,
         min_relevant_usd: minRelevantUsd,
+        execution_mode: executionMode,
       });
 
       onTraceStarted(res.trace_id);
@@ -101,6 +115,66 @@ export const TraceLauncherModal: React.FC<TraceLauncherModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
+          {/* Canonical Scenario Quick Load Banner */}
+          <div className="p-3 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-xl flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="font-semibold text-amber-300 text-[11px]">SIH Canonical Demo Scenario</div>
+                <div className="text-[10px] text-slate-400">4-hop TRC-20 USDT scam flow $\rightarrow$ Binance consolidation</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleUseCanonicalDemo}
+              className="px-2.5 py-1 text-[11px] font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg transition"
+            >
+              Autofill Scenario
+            </button>
+          </div>
+
+          {/* Execution Mode Selector */}
+          <div className="space-y-1.5">
+            <label className="block text-slate-300 font-semibold uppercase text-[10px] tracking-wider">
+              Execution Mode
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setExecutionMode('DEMO')}
+                className={`p-2.5 rounded-lg border text-left transition flex items-start gap-2 ${
+                  executionMode === 'DEMO'
+                    ? 'bg-amber-500/15 border-amber-500/60 text-amber-200 ring-1 ring-amber-500/40'
+                    : 'bg-police-800/60 border-police-700 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Zap className={`h-4 w-4 mt-0.5 shrink-0 ${executionMode === 'DEMO' ? 'text-amber-400' : 'text-slate-500'}`} />
+                <div>
+                  <div className="font-bold text-[11px] text-slate-200">⚡ Demo / Replay Mode</div>
+                  <div className="text-[10px] text-slate-400">Deterministic fixtures, zero latency, offline-resilient</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setExecutionMode('LIVE')}
+                className={`p-2.5 rounded-lg border text-left transition flex items-start gap-2 ${
+                  executionMode === 'LIVE'
+                    ? 'bg-emerald-500/15 border-emerald-500/60 text-emerald-200 ring-1 ring-emerald-500/40'
+                    : 'bg-police-800/60 border-police-700 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Globe className={`h-4 w-4 mt-0.5 shrink-0 ${executionMode === 'LIVE' ? 'text-emerald-400' : 'text-slate-500'}`} />
+                <div>
+                  <div className="font-bold text-[11px] text-slate-200">🌐 Live TRON RPC</div>
+                  <div className="text-[10px] text-slate-400">Live TronGrid API, real on-chain transaction data</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Target Address */}
           <div className="space-y-1.5">
             <label className="block text-slate-300 font-semibold uppercase text-[10px] tracking-wider">

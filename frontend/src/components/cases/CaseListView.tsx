@@ -10,9 +10,12 @@ import {
   TrendingUp, 
   ShieldAlert, 
   RefreshCw, 
-  Database 
+  Database,
+  Zap,
+  Loader2
 } from 'lucide-react';
 import type { CaseItem } from '../../types/case';
+import { seedDemoCase } from '../../api/demo';
 
 interface CaseListViewProps {
   cases: CaseItem[];
@@ -30,6 +33,22 @@ export const CaseListView: React.FC<CaseListViewProps> = ({
   onRefresh,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSeedingDemo, setIsSeedingDemo] = useState(false);
+
+  const handleLoadDemoCase = async () => {
+    setIsSeedingDemo(true);
+    try {
+      const res = await seedDemoCase();
+      await onRefresh();
+      if (res.case_id) {
+        onSelectCase(res.case_id);
+      }
+    } catch (err) {
+      console.error('Failed to seed demo case:', err);
+    } finally {
+      setIsSeedingDemo(false);
+    }
+  };
 
   const filteredCases = cases.filter((c) => {
     const q = searchTerm.toLowerCase();
@@ -103,6 +122,26 @@ export const CaseListView: React.FC<CaseListViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* SIH Demo Seed / Reset Button for Evaluators */}
+          <button
+            onClick={handleLoadDemoCase}
+            disabled={isSeedingDemo}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
+            title="Reset and load the canonical 4-hop TRON/USDT SIH demo case"
+          >
+            {isSeedingDemo ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                <span>Seeding Demo...</span>
+              </>
+            ) : (
+              <>
+                <Zap className="h-3.5 w-3.5 text-amber-400" />
+                <span>⚡ Load SIH Demo Case</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={onRefresh}
             className="p-2 rounded-lg bg-police-900 border border-police-700 hover:bg-police-800 text-slate-400 hover:text-white transition"
@@ -135,17 +174,29 @@ export const CaseListView: React.FC<CaseListViewProps> = ({
             </button>
           </div>
         ) : (
-          filteredCases.map((c) => (
+          filteredCases.map((c) => {
+            const isCanonical = c.fir_number === 'FIR-2026-DEL-CY-0812' || c.id === '00000000-0000-0000-0000-000000000812';
+            return (
             <div
               key={c.id}
               onClick={() => onSelectCase(c.id)}
-              className="p-4 rounded-xl bg-police-800/70 hover:bg-police-800 border border-police-700/70 hover:border-police-600 transition cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group"
+              className={`p-4 rounded-xl border transition cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group ${
+                isCanonical 
+                  ? 'bg-police-800/90 hover:bg-police-800 border-amber-500/40 hover:border-amber-500/60 shadow-lg shadow-amber-500/5' 
+                  : 'bg-police-800/70 hover:bg-police-800 border-police-700/70 hover:border-police-600'
+              }`}
             >
               <div className="space-y-1.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-bold text-white group-hover:text-blue-400 transition font-mono">
                     FIR #{c.fir_number}
                   </span>
+                  {isCanonical && (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                      <Zap className="h-3 w-3 text-amber-400" />
+                      SIH CANONICAL DEMO
+                    </span>
+                  )}
                   <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     {c.status}
                   </span>
@@ -197,8 +248,9 @@ export const CaseListView: React.FC<CaseListViewProps> = ({
                 </button>
               </div>
             </div>
-          ))
-        )}
+          );
+        })
+      )}
       </div>
     </div>
   );

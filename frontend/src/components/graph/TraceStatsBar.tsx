@@ -7,7 +7,9 @@ import {
   Timer, 
   CheckCircle2, 
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Zap,
+  Globe
 } from 'lucide-react';
 import type { GraphMeta } from '../../types/graph';
 
@@ -86,6 +88,17 @@ export const TraceStatsBar: React.FC<TraceStatsBarProps> = ({ meta, onOpenPrunin
 
         {/* Execution Duration & Bounds Notice */}
         <div className="flex items-center gap-3 text-xs text-slate-400">
+          {meta.execution_mode === 'DEMO' ? (
+            <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/40 font-bold">
+              <Zap className="h-3 w-3 text-amber-400" />
+              DEMO REPLAY
+            </span>
+          ) : meta.execution_mode === 'LIVE' ? (
+            <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-bold">
+              <Globe className="h-3 w-3 text-emerald-400" />
+              LIVE TRON
+            </span>
+          ) : null}
           {meta.is_partial && (
             <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
               <ShieldAlert className="h-3 w-3 text-amber-400" />

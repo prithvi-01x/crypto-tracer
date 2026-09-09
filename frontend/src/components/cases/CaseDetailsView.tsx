@@ -14,14 +14,15 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import type { CaseItem } from '../../types/case';
-import type { InvestigationGraph, TraceStatus, GraphNode, GraphEdge } from '../../types/graph';
+import type { InvestigationGraph, TraceStatus, GraphNode, GraphEdge, TraceAttributionReport } from '../../types/graph';
 import { getCaseById } from '../../api/cases';
-import { getTracesByCase, getTraceGraph, startTrace } from '../../api/traces';
+import { getTracesByCase, getTraceGraph, startTrace, getTraceAttribution } from '../../api/traces';
 import { InvestigationGraphCanvas } from '../graph/InvestigationGraphCanvas';
 import { TraceStatsBar } from '../graph/TraceStatsBar';
 import { GraphDetailDrawer } from '../graph/GraphDetailDrawer';
 import { PruningDrawer } from '../graph/PruningDrawer';
 import { TraceLauncherModal } from '../graph/TraceLauncherModal';
+import { VaspAttributionBanner } from '../graph/VaspAttributionBanner';
 import { EvidenceWorkstation } from '../evidence/EvidenceWorkstation';
 import { ReportExportModal } from '../reports/ReportExportModal';
 
@@ -35,6 +36,8 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   const [traces, setTraces] = useState<TraceStatus[]>([]);
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const [graph, setGraph] = useState<InvestigationGraph | null>(null);
+  const [attribution, setAttribution] = useState<TraceAttributionReport | null>(null);
+  const [attributionLoading, setAttributionLoading] = useState(false);
 
   // Selections
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
@@ -82,28 +85,45 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
     load();
   }, [caseId]);
 
-  // Load Graph when selectedTraceId changes
+  // Load Graph and Attribution when selectedTraceId changes
   useEffect(() => {
     if (!selectedTraceId) {
       setGraph(null);
+      setAttribution(null);
       return;
     }
 
-    async function fetchGraph() {
+    async function fetchGraphAndAttribution() {
       setGraphLoading(true);
+      setAttributionLoading(true);
       setSelectedNode(null);
       setSelectedEdge(null);
       try {
-        const graphData = await getTraceGraph(selectedTraceId!);
-        setGraph(graphData);
+        const [graphRes, attrRes] = await Promise.allSettled([
+          getTraceGraph(selectedTraceId!),
+          getTraceAttribution(selectedTraceId!),
+        ]);
+
+        if (graphRes.status === 'fulfilled') {
+          setGraph(graphRes.value);
+        } else {
+          console.error('Error fetching graph:', graphRes.reason);
+        }
+
+        if (attrRes.status === 'fulfilled') {
+          setAttribution(attrRes.value);
+        } else {
+          setAttribution(null);
+        }
       } catch (err: any) {
-        console.error('Error fetching graph:', err);
+        console.error('Error fetching trace details:', err);
       } finally {
         setGraphLoading(false);
+        setAttributionLoading(false);
       }
     }
 
-    fetchGraph();
+    fetchGraphAndAttribution();
   }, [selectedTraceId]);
 
   const copyToClipboard = (text: string) => {
@@ -269,7 +289,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
               >
                 {traces.map((t, idx) => (
                   <option key={t.trace_id} value={t.trace_id}>
-                    Run #{traces.length - idx}: {t.input_value.slice(0, 8)}... (Hop {t.max_hops}, {t.node_count} nodes, {t.edge_count} edges, {t.pruned_count} pruned) - {t.status} {t.is_partial ? '[PARTIAL]' : ''}
+                    [{t.execution_mode === 'DEMO' ? '⚡ DEMO' : '🌐 LIVE'}] Run #{traces.length - idx}: {t.input_value.slice(0, 8)}... (Hop {t.max_hops}, {t.node_count} nodes, {t.edge_count} edges, {t.pruned_count} pruned) - {t.status} {t.is_partial ? '[PARTIAL]' : ''}
                   </option>
                 ))}
               </select>
@@ -278,6 +298,16 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
 
           {selectedTrace && (
             <div className="flex items-center gap-2 text-xs">
+              {selectedTrace.execution_mode === 'DEMO' ? (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/40">
+                  ⚡ DEMO REPLAY
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">
+                  🌐 LIVE TRON
+                </span>
+              )}
+
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${
                 selectedTrace.status === 'COMPLETED'
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
@@ -356,6 +386,17 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
         />
       ) : (
         <>
+          {/* Prominent VASP Attribution Banner */}
+          {selectedTraceId && (
+            <VaspAttributionBanner
+              attribution={attribution}
+              loading={attributionLoading}
+              onNavigateToEvidence={() => setActiveTab('evidence')}
+              onOpenReportModal={() => setIsReportModalOpen(true)}
+              executionMode={selectedTrace?.execution_mode || graph?.meta.execution_mode || 'DEMO'}
+            />
+          )}
+
           {/* Trace Statistics Overview Bar */}
           {graph && (
             <TraceStatsBar
