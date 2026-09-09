@@ -413,3 +413,51 @@ Crypto-Tracer is implemented as a modular layered monolith, prioritizing rapid d
 | **Data & Infra** | Database | PostgreSQL | 16-alpine | ACID-compliant persistence for cases, traces, evidence, and audit logs. |
 | | Caching | Redis | 7-alpine | In-memory cache for API responses and traversal deduplication. |
 | | Containerization | Docker Compose | 2.20+ | Multi-service orchestration for reliable, one-command deployment. |
+
+---
+
+## Repository Structure
+
+```
+crypto-tracer/
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/
+│   │   │   ├── endpoints/
+│   │   │   │   ├── auth.py              # Analyst context and session verification
+│   │   │   │   ├── cases.py             # Case registration, listing, and context retrieval
+│   │   │   │   ├── demo.py              # Canonical SIH 2026 demo seed and reset
+│   │   │   │   ├── evidence.py          # Evidence DAG retrieval and chain of custody
+│   │   │   │   ├── health.py            # Service health and component connectivity
+│   │   │   │   ├── reports.py           # Dossier and Section 94 BNSS PDF generation
+│   │   │   │   └── traces.py            # Multi-hop traversal, graph, and attribution
+│   │   │   ├── schemas/                 # Pydantic v2 request/response models
+│   │   │   └── router.py                # Centralized v1 API routing
+│   │   ├── core/                        # Core domain logic
+│   │   │   ├── attribution/             # Multi-factor VASP attribution engine
+│   │   │   ├── evidence/                # RFC-8785 canonicalization and DAG engine
+│   │   │   └── traversal/               # Multi-hop BFS traversal and noise pruning
+│   │   ├── persistence/                 # SQLAlchemy 2.0 models and PostgreSQL engine
+│   │   ├── services/                    # ReportLab PDF compilation and demo seeding
+│   │   └── config.py                    # Environment and application settings
+│   ├── tests/                           # 83 automated pytest test suites
+│   ├── requirements.txt                 # Python dependencies
+│   └── Dockerfile                       # Backend container definition
+├── frontend/
+│   ├── src/
+│   │   ├── api/                         # Typed API client modules
+│   │   ├── components/
+│   │   │   ├── cases/                   # Case list, registration modal, and workspace
+│   │   │   ├── evidence/                # Evidence workstation, DAG viewer, audit trail
+│   │   │   ├── graph/                   # Cytoscape canvas, detail drawer, attribution banner
+│   │   │   └── reports/                 # Reports workstation, PDF preview, and downloads
+│   │   ├── types/                       # TypeScript interfaces
+│   │   ├── App.tsx                      # Root workspace navigation and theme management
+│   │   └── main.tsx                     # React application entry point
+│   ├── package.json                     # Frontend dependencies
+│   ├── vite.config.ts                   # Vite build configuration
+│   └── Dockerfile                       # Production Nginx container definition
+├── docker-compose.yml                   # Multi-container service definitions
+├── JUDGE_DEFENSE.md                     # Technical reference for SIH evaluation
+└── README.md                            # Comprehensive project documentation
+```
