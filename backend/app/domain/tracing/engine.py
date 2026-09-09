@@ -262,10 +262,9 @@ class GraphEngine:
                         boundary_entity = mixer_name
                         is_partial = True
                         # Do NOT enqueue mixer node for outgoing expansion
-                        continue
 
                     # Boundary Check 2: Cross-Chain Bridge Gateway
-                    if initial_type == "bridge":
+                    elif initial_type == "bridge":
                         bridge_entry = self.registry.get(dest)
                         bridge_name = bridge_entry.entity_name if bridge_entry else "Bridge Gateway"
                         logger.info(f"Cross-chain bridge boundary reached at {dest} ({bridge_name}). Traversal halted from this node.")
@@ -275,10 +274,9 @@ class GraphEngine:
                         boundary_entity = bridge_name
                         is_partial = True
                         # Do NOT enqueue bridge node for single-chain outgoing expansion
-                        continue
 
                     # Enqueue standard intermediate wallet for next hop expansion if depth permits
-                    if next_hop < self.max_hops and dest not in visited_addresses:
+                    elif next_hop < self.max_hops and dest not in visited_addresses:
                         queue.append((dest, next_hop))
                     elif next_hop >= self.max_hops:
                         max_hops_encountered = True

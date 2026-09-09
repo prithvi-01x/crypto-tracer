@@ -210,30 +210,36 @@ async def generate_bnss94_draft(
         attribution_report = engine.evaluate_trace(trace_id=trace.id, graph=graph)
 
         # Boundary checks for Section 94 BNSS requisitions
-        if not request.target_vasp:
-            # If trace has no transactions
-            if len(graph.edges) == 0:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={
-                        "code": "NO_TRANSFERS_FOUND",
-                        "message": "Cannot generate Section 94 BNSS notice: Trace contains no on-chain transactions or VASP endpoints to requisition.",
-                    }
-                )
+        # 1. If trace has no transactions
+        if len(graph.edges) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "NO_TRANSFERS_FOUND",
+                    "message": "Cannot generate Section 94 BNSS notice: Trace contains no on-chain transactions or VASP endpoints to requisition.",
+                }
+            )
 
+        # 2. Check candidate address or target for mixer / obfuscation boundary
+        target_addr = request.candidate_address or (attribution_report.best_candidate.candidate_address if attribution_report and attribution_report.best_candidate else None)
+        target_name = (request.target_vasp or (attribution_report.best_candidate.vasp_name if attribution_report and attribution_report.best_candidate else "")).lower()
+
+        if (target_addr and engine.registry.is_mixer(target_addr)) or "mixer" in target_name or "tornado" in target_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "MIXER_BOUNDARY",
+                    "message": (
+                        "Cannot generate Section 94 BNSS notice: Target address is a decentralized privacy mixer/tumbler "
+                        "with no custodial entity or KYC records to requisition."
+                    ),
+                }
+            )
+
+        # 3. Check for low confidence or unidentified entity when no manual VASP override is provided
+        if not request.target_vasp:
             if attribution_report and attribution_report.best_candidate:
                 best = attribution_report.best_candidate
-                if best.entity_category == "mixer" or best.vasp_id == "mixer":
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail={
-                            "code": "MIXER_BOUNDARY",
-                            "message": (
-                                "Cannot generate Section 94 BNSS notice: Target address is a decentralized privacy mixer/tumbler "
-                                "with no custodial entity or KYC records to requisition."
-                            ),
-                        }
-                    )
                 if best.vasp_id in ("unknown_entity", "unidentified") or best.confidence < 0.40 or best.is_low_confidence:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
