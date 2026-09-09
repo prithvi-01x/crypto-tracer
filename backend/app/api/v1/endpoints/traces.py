@@ -1,3 +1,5 @@
+import uuid
+from datetime import datetime, timezone
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +9,11 @@ from backend.app.persistence.db import get_db
 from backend.app.persistence.redis import get_redis
 from backend.app.persistence.case_repository import CaseRepository
 from backend.app.persistence.trace_repository import TraceRepository
+from backend.app.persistence.evidence_repository import EvidenceRepository
+from backend.app.persistence.audit_repository import AuditRepository
+from backend.app.domain.evidence.generator import EvidenceGenerator
+from backend.app.domain.evidence.models import AuditEvent, AuditEventType
+from backend.app.domain.evidence.hasher import compute_content_hash
 from backend.app.adapters.tron_provider import TronProvider, validate_tron_address
 from backend.app.domain.tracing.engine import GraphEngine
 from backend.app.domain.models import InvestigationGraph
@@ -80,6 +87,33 @@ async def start_trace(
 
         meta = graph.meta or {}
         pruned_records_count = len(graph.pruned_records)
+
+        # 7. Automatically compile & persist baseline trace evidence items (Tier 1 & 2)
+        try:
+            evidence_items = EvidenceGenerator.generate_trace_evidence(
+                case_id=updated_trace.case_id,
+                trace_id=updated_trace.id,
+                graph=graph,
+                config_snapshot={"max_hops": updated_trace.max_hops, "min_relevant_usd": str(updated_trace.min_relevant_usd)},
+            )
+            await EvidenceRepository.save_evidence_items(db, evidence_items)
+
+            # Record investigator audit event
+            now_utc = datetime.now(timezone.utc)
+            audit_ev = AuditEvent(
+                id=str(uuid.uuid4()),
+                case_id=updated_trace.case_id,
+                trace_id=updated_trace.id,
+                actor_id="investigator",
+                event_type=AuditEventType.TRACE_STARTED,
+                action_summary=f"Initiated multi-hop trace from suspect wallet {updated_trace.input_value} (Hops: {updated_trace.max_hops}, Duration: {duration_ms}ms).",
+                metadata={"node_count": updated_trace.node_count, "edge_count": updated_trace.edge_count, "pruned_count": pruned_records_count},
+                content_hash=compute_content_hash({"trace_id": updated_trace.id, "input": updated_trace.input_value, "timestamp": now_utc.isoformat()}),
+                created_at=now_utc,
+            )
+            await AuditRepository.record_event(db, audit_ev)
+        except Exception:
+            pass
 
         return TraceStatusResponse(
             trace_id=updated_trace.id,
@@ -208,7 +242,35 @@ async def get_trace_attribution(
     try:
         await AttributionRepository.save_report(db, report)
     except Exception:
-        # If persistence fails for any reason, continue returning the calculated report
+        pass
+
+    # Compile & persist complete attribution evidence items (Tier 1, 2, and 3)
+    try:
+        evidence_items = EvidenceGenerator.generate_trace_evidence(
+            case_id=trace.case_id,
+            trace_id=trace.id,
+            graph=graph,
+            attribution_report=report,
+            config_snapshot=trace.config,
+        )
+        await EvidenceRepository.save_evidence_items(db, evidence_items)
+
+        # Record investigator audit event
+        now_utc = datetime.now(timezone.utc)
+        top_vasp = report.best_candidate.vasp_name if report.best_candidate else "None"
+        audit_ev = AuditEvent(
+            id=str(uuid.uuid4()),
+            case_id=trace.case_id,
+            trace_id=trace.id,
+            actor_id="investigator",
+            event_type=AuditEventType.ATTRIBUTION_VIEWED,
+            action_summary=f"Viewed VASP attribution hypotheses for trace {trace.id}. Primary hypothesis: {top_vasp}.",
+            metadata={"candidates_count": len(report.candidates), "top_candidate": report.best_candidate.candidate_address if report.best_candidate else None},
+            content_hash=compute_content_hash({"trace_id": trace.id, "action": "ATTRIBUTION_VIEWED", "timestamp": now_utc.isoformat()}),
+            created_at=now_utc,
+        )
+        await AuditRepository.record_event(db, audit_ev)
+    except Exception:
         pass
 
     return AttributionResponse.from_domain(report)
