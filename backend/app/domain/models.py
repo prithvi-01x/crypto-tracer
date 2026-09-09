@@ -27,3 +27,39 @@ class TransferPage(BaseModel):
     has_more: bool = False
     cached: bool = False
     total_fetched: int = 0
+
+
+class GraphNode(BaseModel):
+    id: str = Field(..., description="Unique node identifier (wallet address)")
+    address: str = Field(..., description="Wallet address")
+    chain: str = Field("TRON", description="Blockchain network")
+    node_type: str = Field("unknown", description="suspect, intermediate, endpoint, etc.")
+    hop: int = Field(0, description="Minimum hop distance from root suspect wallet")
+    total_received: Decimal = Field(Decimal(0), description="Total volume received in USDT")
+    total_sent: Decimal = Field(Decimal(0), description="Total volume sent in USDT")
+    transaction_count: int = Field(0, description="Observed transaction count")
+    first_seen: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GraphEdge(BaseModel):
+    id: str = Field(..., description="Unique edge identifier")
+    tx_hash: str = Field(..., description="Transaction hash / ID")
+    from_address: str = Field(..., description="Source address")
+    to_address: str = Field(..., description="Destination address")
+    amount: Decimal = Field(..., description="Normalized transfer amount in token units")
+    amount_raw: int = Field(..., description="Raw atomic integer token amount")
+    asset: str = Field("TRC20:USDT", description="Asset identifier")
+    timestamp: datetime = Field(..., description="Transaction timestamp")
+    block_number: Optional[int] = None
+    hop: int = Field(1, description="Hop level of this transaction traversal")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InvestigationGraph(BaseModel):
+    nodes: List[GraphNode]
+    edges: List[GraphEdge]
+    meta: Dict[str, Any] = Field(default_factory=dict)

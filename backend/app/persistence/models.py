@@ -58,5 +58,9 @@ class Trace(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
     engine_version = Column(String(50), nullable=False, default="0.1.0")
     config = Column(JSON, nullable=True)
+    graph_data = Column(JSON, nullable=True)
+    node_count = Column(Integer, nullable=False, default=0)
+    edge_count = Column(Integer, nullable=False, default=0)
+    duration_ms = Column(Integer, nullable=True)
 
     case = relationship("Case", back_populates="traces")
