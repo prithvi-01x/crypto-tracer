@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+
+# Environment variables
+.env
+!.env.example
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+
+# Docker volumes
+postgres_data/
+redis_data/
