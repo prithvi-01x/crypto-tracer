@@ -10,7 +10,10 @@ from backend.app.persistence.trace_repository import TraceRepository
 from backend.app.adapters.tron_provider import TronProvider, validate_tron_address
 from backend.app.domain.tracing.engine import GraphEngine
 from backend.app.domain.models import InvestigationGraph
+from backend.app.domain.attribution.engine import AttributionEngine
+from backend.app.persistence.attribution_repository import AttributionRepository
 from backend.app.api.v1.schemas.traces import TraceCreateRequest, TraceStatusResponse
+from backend.app.api.v1.schemas.attribution import AttributionResponse
 
 router = APIRouter(prefix="/traces", tags=["Traces"])
 
@@ -168,3 +171,44 @@ async def get_trace_graph(
         )
 
     return InvestigationGraph(**trace.graph_data)
+
+
+@router.get("/{trace_id}/attribution", response_model=AttributionResponse)
+async def get_trace_attribution(
+    trace_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Evaluate and retrieve explainable VASP attribution hypotheses for the specified trace graph.
+    Computes calibrated confidence score based on direct tagging, sweep patterns,
+    fan-in consolidation, and temporal delays.
+    Persists evaluation results to PostgreSQL.
+    """
+    trace = await TraceRepository.get_by_id(db, trace_id)
+    if not trace:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Trace '{trace_id}' not found."
+        )
+
+    if not trace.graph_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Graph data not available for trace '{trace_id}' (status: {trace.status})."
+        )
+
+    # Reconstruct domain InvestigationGraph
+    graph = InvestigationGraph(**trace.graph_data)
+
+    # Execute Attribution Engine evaluation
+    engine = AttributionEngine()
+    report = engine.evaluate_trace(trace_id=trace.id, graph=graph)
+
+    # Persist attribution results into PostgreSQL
+    try:
+        await AttributionRepository.save_report(db, report)
+    except Exception:
+        # If persistence fails for any reason, continue returning the calculated report
+        pass
+
+    return AttributionResponse.from_domain(report)
