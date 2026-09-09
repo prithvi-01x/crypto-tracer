@@ -10,7 +10,8 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
 import type { CaseItem } from '../../types/case';
 import type { InvestigationGraph, TraceStatus, GraphNode, GraphEdge } from '../../types/graph';
@@ -250,44 +251,69 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
       )}
 
       {/* Trace Selector & Execution Status Header */}
-      <div className="bg-police-800/80 border border-police-700/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <Layers className="h-4 w-4 text-blue-400" />
-            Active Trace Run:
-          </span>
+      <div className="bg-police-800/80 border border-police-700/80 rounded-xl p-3 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <Layers className="h-4 w-4 text-blue-400" />
+              Active Trace Run:
+            </span>
 
-          {traces.length === 0 ? (
-            <span className="text-xs text-slate-400 italic">No traces run yet for this case.</span>
-          ) : (
-            <select
-              value={selectedTraceId || ''}
-              onChange={(e) => setSelectedTraceId(e.target.value)}
-              className="px-3 py-1.5 rounded-lg bg-police-900 border border-police-700 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
-            >
-              {traces.map((t, idx) => (
-                <option key={t.trace_id} value={t.trace_id}>
-                  Run #{traces.length - idx}: {t.input_value.slice(0, 8)}... (Hop {t.max_hops}, {t.node_count} nodes, {t.edge_count} edges, {t.pruned_count} pruned) - {t.status}
-                </option>
-              ))}
-            </select>
+            {traces.length === 0 ? (
+              <span className="text-xs text-slate-400 italic">No traces run yet for this case.</span>
+            ) : (
+              <select
+                value={selectedTraceId || ''}
+                onChange={(e) => setSelectedTraceId(e.target.value)}
+                className="px-3 py-1.5 rounded-lg bg-police-900 border border-police-700 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+              >
+                {traces.map((t, idx) => (
+                  <option key={t.trace_id} value={t.trace_id}>
+                    Run #{traces.length - idx}: {t.input_value.slice(0, 8)}... (Hop {t.max_hops}, {t.node_count} nodes, {t.edge_count} edges, {t.pruned_count} pruned) - {t.status} {t.is_partial ? '[PARTIAL]' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {selectedTrace && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${
+                selectedTrace.status === 'COMPLETED'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : selectedTrace.status === 'PARTIAL'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  : selectedTrace.status === 'FAILED'
+                  ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                  : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+              }`}>
+                {selectedTrace.status}
+              </span>
+
+              {selectedTrace.boundary_code && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950/60 text-amber-400 border border-amber-700/50">
+                  {selectedTrace.boundary_code}
+                </span>
+              )}
+
+              <span className="text-slate-400 text-[11px] ml-1">
+                Executed: {selectedTrace.completed_at ? new Date(selectedTrace.completed_at).toLocaleTimeString() : 'In Progress'}
+              </span>
+            </div>
           )}
         </div>
 
-        {selectedTrace && (
-          <div className="flex items-center gap-3 text-xs">
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${
-              selectedTrace.status === 'COMPLETED'
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                : selectedTrace.status === 'FAILED'
-                ? 'bg-red-500/20 text-red-300 border-red-500/30'
-                : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-            }`}>
-              {selectedTrace.status}
-            </span>
-            <span className="text-slate-400 text-[11px]">
-              Executed: {selectedTrace.completed_at ? new Date(selectedTrace.completed_at).toLocaleTimeString() : 'In Progress'}
-            </span>
+        {selectedTrace && (selectedTrace.status === 'PARTIAL' || selectedTrace.boundary_code) && selectedTrace.investigator_summary && (
+          <div className="text-xs bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 text-amber-300 flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold block text-[11px] uppercase tracking-wide">
+                Boundary / Partial Investigation Notice:
+              </span>
+              <span className="text-slate-300 text-[11px] leading-relaxed">
+                {selectedTrace.investigator_summary}
+              </span>
+            </div>
           </div>
         )}
       </div>

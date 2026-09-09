@@ -86,7 +86,13 @@ export const TraceStatsBar: React.FC<TraceStatsBarProps> = ({ meta, onOpenPrunin
 
         {/* Execution Duration & Bounds Notice */}
         <div className="flex items-center gap-3 text-xs text-slate-400">
-          {meta.bounds_hit && (
+          {meta.is_partial && (
+            <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              <ShieldAlert className="h-3 w-3 text-amber-400" />
+              Partial Trace {meta.boundary_reached ? `[${meta.boundary_reached}]` : ''}
+            </span>
+          )}
+          {meta.bounds_hit && !meta.is_partial && (
             <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
               <ShieldAlert className="h-3 w-3" />
               Safety Bounds Enforced

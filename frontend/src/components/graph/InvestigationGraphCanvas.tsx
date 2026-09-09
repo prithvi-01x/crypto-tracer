@@ -8,7 +8,8 @@ import {
   Crosshair, 
   Tag, 
   Info, 
-  Layers
+  Layers,
+  AlertTriangle
 } from 'lucide-react';
 import type { InvestigationGraph, GraphNode, GraphEdge } from '../../types/graph';
 
@@ -29,22 +30,20 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
-  const [showLabels, setShowLabels] = useState(true);
+  const [showLabels, setShowLabels] = useState<boolean>(true);
 
-  // Helper to format short address
+  // Shorten wallet address for visual node badges
   const shortAddr = (addr: string) => {
     if (!addr) return '';
-    return `${addr.slice(0, 5)}...${addr.slice(-4)}`;
+    if (addr.length <= 12) return addr;
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  // Helper to format currency
+  // Format amount for display
   const formatAmount = (val: number | string) => {
-    const num = typeof val === 'string' ? parseFloat(val) : val;
-    if (isNaN(num)) return `$${val}`;
-    if (num >= 1000) {
-      return `$${(num / 1000).toFixed(1)}k`;
-    }
-    return `$${num.toFixed(2)}`;
+    const num = Number(val);
+    if (isNaN(num)) return `${val} USDT`;
+    return `${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
   };
 
   // Highlight path from root suspect to given target node
@@ -96,6 +95,12 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       let labelText = `${shortAddr(n.address)}`;
       if (n.node_type === 'suspect') {
         labelText = `🚨 SUSPECT\n${shortAddr(n.address)}`;
+      } else if (n.node_type === 'mixer') {
+        labelText = `⚠️ MIXER\n${shortAddr(n.address)}`;
+      } else if (n.node_type === 'bridge') {
+        labelText = `🌉 BRIDGE\n${shortAddr(n.address)}`;
+      } else if (n.node_type === 'vasp') {
+        labelText = `🏦 VASP\n${shortAddr(n.address)}`;
       } else if (n.node_type === 'endpoint') {
         labelText = `🎯 ENDPOINT\n${shortAddr(n.address)}`;
       } else {
@@ -200,6 +205,39 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
             'border-width': 3,
             'width': 40,
             'height': 40,
+          },
+        },
+        // Mixer Node (High-Risk Obfuscation - Purple)
+        {
+          selector: 'node[type = "mixer"]',
+          style: {
+            'background-color': '#581c87',
+            'border-color': '#c084fc',
+            'border-width': 3.5,
+            'width': 44,
+            'height': 44,
+          },
+        },
+        // Bridge Node (Cross-Chain Gateway - Teal)
+        {
+          selector: 'node[type = "bridge"]',
+          style: {
+            'background-color': '#134e4a',
+            'border-color': '#2dd4bf',
+            'border-width': 3.5,
+            'width': 44,
+            'height': 44,
+          },
+        },
+        // VASP Node (Exchange Endpoint - Amber)
+        {
+          selector: 'node[type = "vasp"]',
+          style: {
+            'background-color': '#78350f',
+            'border-color': '#f59e0b',
+            'border-width': 3.5,
+            'width': 44,
+            'height': 44,
           },
         },
         // Edges Base
@@ -390,13 +428,39 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       {/* Visual Canvas */}
       <div ref={containerRef} className="flex-1 w-full h-full cursor-grab active:cursor-grabbing" />
 
-      {/* Single node / 0 transfer notice banner */}
-      {isSingleNode && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-amber-950/90 border border-amber-800 text-amber-200 text-xs flex items-center gap-2 shadow-lg backdrop-blur">
+      {/* Boundary / Operational alert banner */}
+      {graph.meta.boundary_reached ? (
+        <div className={`absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-lg border text-xs flex items-center gap-2.5 shadow-xl backdrop-blur max-w-[85%] z-20 ${
+          graph.meta.boundary_reached === 'MIXER_BOUNDARY'
+            ? 'bg-purple-950/95 border-purple-500 text-purple-200'
+            : graph.meta.boundary_reached === 'BRIDGE_BOUNDARY'
+            ? 'bg-teal-950/95 border-teal-500 text-teal-200'
+            : graph.meta.boundary_reached === 'MAX_HOPS_REACHED'
+            ? 'bg-slate-900/95 border-slate-700 text-slate-300'
+            : 'bg-amber-950/95 border-amber-600 text-amber-200'
+        }`}>
+          <AlertTriangle className={`h-4 w-4 shrink-0 ${
+            graph.meta.boundary_reached === 'MIXER_BOUNDARY' ? 'text-purple-400' :
+            graph.meta.boundary_reached === 'BRIDGE_BOUNDARY' ? 'text-teal-400' : 'text-amber-400'
+          }`} />
+          <span className="font-mono font-bold tracking-wide">
+            [{graph.meta.boundary_reached}]
+          </span>
+          <span>
+            {graph.meta.investigator_explanation ||
+             (graph.meta.boundary_reached === 'MIXER_BOUNDARY'
+               ? 'High-risk obfuscation service (Mixer) encountered. Traversal halted at mixer boundary per anti-de-anonymization policy.'
+               : graph.meta.boundary_reached === 'BRIDGE_BOUNDARY'
+               ? 'Cross-chain bridge gateway encountered. Single-chain TRON traversal terminated.'
+               : `Operational boundary: ${graph.meta.boundary_reached}`)}
+          </span>
+        </div>
+      ) : isSingleNode ? (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-amber-950/90 border border-amber-800 text-amber-200 text-xs flex items-center gap-2 shadow-lg backdrop-blur z-20">
           <Info className="h-4 w-4 text-amber-400 shrink-0" />
           <span>Root suspect wallet has 0 relevant outgoing transfers matching current threshold (&gt;= ${graph.meta.min_relevant_usd}).</span>
         </div>
-      )}
+      ) : null}
 
       {/* Floating Toolbar */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-1.5 p-1 rounded-lg bg-police-900/90 border border-police-700/80 shadow-lg backdrop-blur">
@@ -447,7 +511,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       </div>
 
       {/* Legend Badge */}
-      <div className="absolute bottom-4 left-4 z-10 p-2.5 rounded-lg bg-police-900/90 border border-police-700/80 shadow-lg backdrop-blur flex items-center gap-3 text-[11px]">
+      <div className="absolute bottom-4 left-4 z-10 p-2.5 rounded-lg bg-police-900/90 border border-police-700/80 shadow-lg backdrop-blur flex flex-wrap items-center gap-3 text-[11px]">
         <div className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-full bg-red-600 border border-red-400" />
           <span className="text-slate-300 font-semibold">Suspect</span>
@@ -458,10 +522,18 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-full bg-emerald-600 border border-emerald-400" />
-          <span className="text-slate-300 font-semibold">Endpoint / Deposit</span>
+          <span className="text-slate-300 font-semibold">Endpoint</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-full bg-purple-700 border border-purple-400" />
+          <span className="text-purple-300 font-semibold">Mixer</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-full bg-teal-700 border border-teal-400" />
+          <span className="text-teal-300 font-semibold">Bridge</span>
         </div>
         <div className="flex items-center gap-1 text-slate-400 pl-1 border-l border-police-700">
-          <span>Click any node or edge to inspect & highlight path</span>
+          <span>Click any element to inspect</span>
         </div>
       </div>
     </div>

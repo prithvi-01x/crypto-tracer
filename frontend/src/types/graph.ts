@@ -57,6 +57,9 @@ export interface GraphMeta {
   max_branches_per_node: number;
   duration_ms: number;
   bounds_hit: boolean;
+  boundary_reached?: string | null;
+  is_partial?: boolean;
+  investigator_explanation?: string | null;
 }
 
 export interface InvestigationGraph {
@@ -64,6 +67,7 @@ export interface InvestigationGraph {
   edges: GraphEdge[];
   pruned_records: PrunedRecord[];
   meta: GraphMeta;
+  boundary?: Record<string, any> | null;
 }
 
 export interface TraceCreateInput {
@@ -79,7 +83,7 @@ export interface TraceCreateInput {
 export interface TraceStatus {
   trace_id: string;
   case_id: string;
-  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | string;
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED' | string;
   chain: string;
   input_value: string;
   asset: string;
@@ -93,6 +97,9 @@ export interface TraceStatus {
   pruned_nodes?: number | null;
   raw_transfers_count?: number;
   relevant_transfers_count?: number;
+  boundary_code?: string | null;
+  investigator_summary?: string | null;
+  is_partial?: boolean;
   started_at?: string | null;
   completed_at?: string | null;
 }
