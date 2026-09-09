@@ -490,3 +490,43 @@ The backend exposes 20 verified RESTful endpoints under `/api/v1` and root:
 | `GET` | `/api/v1/cases/{id}/reports` | List Reports | Returns all generated legal reports and download metadata for a case. |
 | `GET` | `/api/v1/reports/{id}/download` | Download PDF | Streams the binary PDF report file with verifiable content headers. |
 | `POST` | `/api/v1/demo/seed` | Demo Replay Seed | Resets and seeds the canonical SIH 2026 evaluation scenario. |
+
+---
+
+## Quick Start & Local Development
+
+### Prerequisites
+- **Python:** 3.12 or higher
+- **Node.js:** 20 LTS or higher
+- **Docker & Docker Compose:** Docker Engine 24+ with Compose v2
+- **PostgreSQL & Redis:** (Required if running outside Docker)
+
+### 1. Repository Setup
+```bash
+git clone https://github.com/your-org/crypto-tracer.git
+cd crypto-tracer
+```
+
+### 2. Backend Setup (Local)
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r backend/requirements.txt
+
+# Run database migrations / initialize tables
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 3. Frontend Setup (Local)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The application will be accessible at:
+- **Frontend Workstation:** `http://localhost:5173`
+- **Backend API & Swagger Docs:** `http://localhost:8000/api/v1/docs`
