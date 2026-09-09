@@ -14,6 +14,10 @@ from backend.app.persistence.audit_repository import AuditRepository
 from backend.app.domain.evidence.generator import EvidenceGenerator
 from backend.app.domain.evidence.models import AuditEvent, AuditEventType
 from backend.app.domain.evidence.hasher import compute_content_hash
+from backend.app.adapters.base import (
+    ProviderTimeoutError,
+    ProviderRateLimitError,
+)
 from backend.app.adapters.tron_provider import TronProvider, validate_tron_address
 from backend.app.domain.tracing.engine import GraphEngine
 from backend.app.domain.models import InvestigationGraph
@@ -43,13 +47,36 @@ async def start_trace(
             detail=f"Parent case '{trace_in.case_id}' not found."
         )
 
-    # 2. Validate input address format
+    # 2. Validate input blockchain, asset, and address
+    if trace_in.chain.upper() != "TRON":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "UNSUPPORTED_CHAIN",
+                "message": f"Blockchain network '{trace_in.chain}' is not supported. Supported blockchain: TRON.",
+                "supported_chains": ["TRON"],
+            }
+        )
+
+    if trace_in.asset.upper() not in ("USDT", "TRC20:USDT", "TRC-20:USDT"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "UNSUPPORTED_ASSET",
+                "message": f"Asset '{trace_in.asset}' is not supported. Supported asset: TRC20:USDT.",
+                "supported_assets": ["TRC20:USDT"],
+            }
+        )
+
     clean_input = trace_in.input.strip()
-    if trace_in.chain.upper() == "TRON" and trace_in.input_type == "address":
+    if trace_in.input_type == "address":
         if not validate_tron_address(clean_input):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid TRON address format: '{clean_input}'. Expected 34-character Base58Check starting with 'T'."
+                detail={
+                    "code": "INVALID_ADDRESS",
+                    "message": f"Invalid TRON address format: '{clean_input}'. Expected 34-character Base58Check starting with 'T'.",
+                }
             )
 
     # 3. Create initial trace record in PostgreSQL
@@ -76,13 +103,21 @@ async def start_trace(
     try:
         graph = await engine.trace(source_address=clean_input)
         duration_ms = int(graph.meta.get("duration_ms", 0))
+        is_partial = graph.meta.get("is_partial", False)
+        boundary_code = graph.meta.get("boundary_reached")
+        investigator_summary = graph.meta.get("investigator_explanation")
 
-        # 6. Persist completed graph in PostgreSQL
+        trace_status = "PARTIAL" if is_partial else "COMPLETED"
+
+        # 6. Persist completed/partial graph in PostgreSQL
         updated_trace = await TraceRepository.update_completed(
             session=db,
             trace_id=trace_record.id,
             graph=graph,
             duration_ms=duration_ms,
+            boundary_code=boundary_code,
+            investigator_summary=investigator_summary,
+            status=trace_status,
         )
 
         meta = graph.meta or {}
@@ -106,8 +141,8 @@ async def start_trace(
                 trace_id=updated_trace.id,
                 actor_id="investigator",
                 event_type=AuditEventType.TRACE_STARTED,
-                action_summary=f"Initiated multi-hop trace from suspect wallet {updated_trace.input_value} (Hops: {updated_trace.max_hops}, Duration: {duration_ms}ms).",
-                metadata={"node_count": updated_trace.node_count, "edge_count": updated_trace.edge_count, "pruned_count": pruned_records_count},
+                action_summary=f"Initiated multi-hop trace from suspect wallet {updated_trace.input_value} (Hops: {updated_trace.max_hops}, Duration: {duration_ms}ms, Status: {trace_status}).",
+                metadata={"node_count": updated_trace.node_count, "edge_count": updated_trace.edge_count, "pruned_count": pruned_records_count, "status": trace_status},
                 content_hash=compute_content_hash({"trace_id": updated_trace.id, "input": updated_trace.input_value, "timestamp": now_utc.isoformat()}),
                 created_at=now_utc,
             )
@@ -132,14 +167,45 @@ async def start_trace(
             pruned_nodes=pruned_records_count,
             raw_transfers_count=meta.get("raw_transfers_fetched_count", 0),
             relevant_transfers_count=meta.get("traversal_relevant_transfers_count", 0),
+            boundary_code=boundary_code,
+            investigator_summary=investigator_summary,
+            is_partial=is_partial,
             started_at=updated_trace.started_at,
             completed_at=updated_trace.completed_at,
+        )
+    except ProviderTimeoutError as ex:
+        boundary_code = "PROVIDER_TIMEOUT"
+        explanation = f"Blockchain provider timed out while querying suspect wallet {clean_input}. Upstream service was unresponsive after bounded retries."
+        await TraceRepository.update_failed(db, trace_record.id, str(ex), boundary_code=boundary_code, investigator_summary=explanation)
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail={
+                "code": boundary_code,
+                "message": explanation,
+                "trace_id": trace_record.id,
+            }
+        )
+    except ProviderRateLimitError as ex:
+        boundary_code = "PROVIDER_RATE_LIMITED"
+        explanation = f"Blockchain provider returned HTTP 429 (Too Many Requests) while querying suspect wallet {clean_input}. Traversal halted."
+        await TraceRepository.update_failed(db, trace_record.id, str(ex), boundary_code=boundary_code, investigator_summary=explanation)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "code": boundary_code,
+                "message": explanation,
+                "trace_id": trace_record.id,
+            }
         )
     except Exception as ex:
         await TraceRepository.update_failed(db, trace_record.id, str(ex))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Trace execution failed: {ex}"
+            detail={
+                "code": "TRACE_EXECUTION_FAILED",
+                "message": f"Trace execution failed: {ex}",
+                "trace_id": trace_record.id,
+            }
         )
 
 
@@ -160,6 +226,9 @@ async def get_trace_status(
 
     meta = (trace.graph_data or {}).get("meta", {})
     pruned_count = getattr(trace, "pruned_count", 0) or meta.get("pruned_transfers_count", 0)
+    boundary_code = getattr(trace, "boundary_code", None) or meta.get("boundary_reached")
+    investigator_summary = getattr(trace, "investigator_summary", None) or meta.get("investigator_explanation")
+    is_partial = (trace.status == "PARTIAL") or meta.get("is_partial", False)
 
     return TraceStatusResponse(
         trace_id=trace.id,
@@ -178,6 +247,9 @@ async def get_trace_status(
         pruned_nodes=pruned_count,
         raw_transfers_count=meta.get("raw_transfers_fetched_count", 0),
         relevant_transfers_count=meta.get("traversal_relevant_transfers_count", 0),
+        boundary_code=boundary_code,
+        investigator_summary=investigator_summary,
+        is_partial=is_partial,
         started_at=trace.started_at,
         completed_at=trace.completed_at,
     )

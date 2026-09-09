@@ -7,6 +7,8 @@ from backend.app.persistence.trace_repository import TraceRepository
 from backend.app.api.v1.schemas.cases import CaseCreate, CaseResponse, CaseListResponse
 from backend.app.api.v1.schemas.traces import TraceStatusResponse
 
+from backend.app.adapters.tron_provider import validate_tron_address
+
 router = APIRouter(prefix="/cases", tags=["Cases"])
 
 
@@ -18,7 +20,45 @@ async def create_case(
     """
     Register a new crypto-fraud investigation case.
     Persists FIR metadata, reported loss, 1930 acknowledgement, and suspect wallet.
+    Validates blockchain network, asset support, and TRON wallet address format.
     """
+    # 1. Chain validation
+    if case_in.chain.upper() != "TRON":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "UNSUPPORTED_CHAIN",
+                "message": f"Blockchain network '{case_in.chain}' is not supported. Supported blockchain: TRON.",
+                "supported_chains": ["TRON"],
+            }
+        )
+
+    # 2. Asset validation
+    if case_in.asset.upper() not in ("USDT", "TRC20:USDT", "TRC-20:USDT"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "UNSUPPORTED_ASSET",
+                "message": f"Asset '{case_in.asset}' is not supported. Supported asset: TRC20:USDT.",
+                "supported_assets": ["TRC20:USDT"],
+            }
+        )
+
+    # 3. Suspect wallet address / TxID format validation (if provided)
+    if case_in.suspect_wallet and case_in.suspect_wallet.strip():
+        clean_addr = case_in.suspect_wallet.strip()
+        # Case creation allows suspect wallet (Base58Check starting with T) OR on-chain TxID (64 hex characters)
+        is_valid_tron_wallet = clean_addr.startswith("T") and (32 <= len(clean_addr) <= 40)
+        is_valid_txid = (len(clean_addr) == 64) and all(c in "0123456789abcdefABCDEF" for c in clean_addr)
+        if not (is_valid_tron_wallet or is_valid_txid):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_ADDRESS",
+                    "message": f"Invalid TRON address / TxID format: '{clean_addr}'. Expected TRON address starting with 'T' or 64-character transaction hash.",
+                }
+            )
+
     case = await CaseRepository.create(db, case_in)
     return CaseResponse(
         id=case.id,
