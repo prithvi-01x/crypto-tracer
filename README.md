@@ -301,3 +301,27 @@ Crypto-Tracer bridges technical blockchain forensics and formal Indian criminal 
 ### Document Outputs
 1. **Complete Evidence Dossier (PDF):** A multi-page forensic document containing executive summaries, multi-hop flow charts, transaction tables, and the complete Section 63 BSA certification certificate.
 2. **Draft Section 94 BNSS Order (PDF):** A formal police directive ready for investigating officer review, requiring the exchange to freeze the target account and produce KYC records within 24–48 hours.
+
+---
+
+## Statutory Framework: BSA 2023 & BNSS 2023
+
+Crypto-Tracer strictly adheres to the updated Indian criminal jurisprudence enacted in 2023:
+
+### 1. Section 63, Bharatiya Sakshya Adhiniyam, 2023 (BSA)
+- **Statutory Context:** Replaces Section 65B of the repealed Indian Evidence Act, 1872.
+- **Application:** Governs the admissibility of electronic records in Indian criminal proceedings.
+- **System Compliance:** Crypto-Tracer's evidence dossier includes a formal Section 63 certificate affirming:
+  - The deterministic operation of the forensic computer system during the period of inquiry.
+  - The integrity of electronic inputs fetched from the blockchain consensus network.
+  - Cryptographic tamper-evident SHA-256 hash chains verifying that evidence records were not modified after collection.
+
+### 2. Section 94, Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS)
+- **Statutory Context:** Replaces Section 91 of the repealed Code of Criminal Procedure, 1973 (CrPC).
+- **Application:** Empowers a police officer in charge of an investigation to issue a formal written order requiring any entity to produce documents or data necessary for the investigation.
+- **System Compliance:** The Section 94 notice automatically formats the legal demand with required statutory provisions, citing:
+  - FIR number, police station, and investigating officer designation.
+  - Target deposit address identified on-chain.
+  - Demand for beneficial owner KYC, registered mobile numbers, email addresses, IP access logs, and linked withdrawal bank/UPI accounts.
+
+> **Deprecated Nomenclature Warning:** Crypto-Tracer does not use or reference outdated pre-2023 statutory terminology (Section 65B IEA or Section 91 CrPC) anywhere in its codebase, user interface, or generated legal reports.
