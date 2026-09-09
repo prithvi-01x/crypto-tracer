@@ -31,6 +31,8 @@ class CandidateResponse(BaseModel):
     confidence_percentage: float = Field(..., description="Confidence percentage e.g. 94.2")
     confidence_band: str = Field(..., description="LOW, MODERATE, HIGH, VERY HIGH")
     verification_status: str = Field("VERIFIED", description="VERIFIED, UNVERIFIED, HEURISTIC")
+    entity_category: str = Field("vasp", description="vasp, mixer, bridge, unidentified")
+    is_low_confidence: bool = Field(False, description="Whether attribution confidence is below evidentiary threshold")
     factors: AttributionFactorsSchema
     explanations: AttributionExplanationsSchema
     evidence_bullet_points: List[str] = Field(default_factory=list)
@@ -49,6 +51,8 @@ class CandidateResponse(BaseModel):
             confidence_percentage=c.confidence_percentage,
             confidence_band=c.confidence_band,
             verification_status=c.verification_status,
+            entity_category=getattr(c, "entity_category", "vasp"),
+            is_low_confidence=getattr(c, "is_low_confidence", False),
             factors=AttributionFactorsSchema(**c.factors.model_dump()),
             explanations=AttributionExplanationsSchema(**c.explanations.model_dump()),
             evidence_bullet_points=c.evidence_bullet_points,

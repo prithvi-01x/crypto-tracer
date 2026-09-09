@@ -75,6 +75,8 @@ class VASPCandidate(BaseModel):
     confidence_percentage: float = Field(..., description="Confidence formatted as percentage, e.g. 94.2")
     confidence_band: str = Field(..., description="LOW, MODERATE, HIGH, VERY HIGH")
     verification_status: str = Field("VERIFIED", description="VERIFIED, UNVERIFIED, HEURISTIC")
+    entity_category: str = Field("vasp", description="vasp, mixer, bridge, unidentified")
+    is_low_confidence: bool = Field(False, description="Whether attribution confidence is below evidentiary threshold")
     factors: FactorScores
     explanations: FactorExplanations
     evidence_bullet_points: List[str] = Field(default_factory=list, description="Checkmark evidence points for UI display")
