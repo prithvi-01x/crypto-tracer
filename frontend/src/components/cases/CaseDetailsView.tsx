@@ -9,7 +9,8 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
-  Loader2
+  Loader2,
+  ShieldCheck
 } from 'lucide-react';
 import type { CaseItem } from '../../types/case';
 import type { InvestigationGraph, TraceStatus, GraphNode, GraphEdge } from '../../types/graph';
@@ -20,6 +21,7 @@ import { TraceStatsBar } from '../graph/TraceStatsBar';
 import { GraphDetailDrawer } from '../graph/GraphDetailDrawer';
 import { PruningDrawer } from '../graph/PruningDrawer';
 import { TraceLauncherModal } from '../graph/TraceLauncherModal';
+import { EvidenceWorkstation } from '../evidence/EvidenceWorkstation';
 
 interface CaseDetailsViewProps {
   caseId: string;
@@ -40,6 +42,9 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   const [isPruningOpen, setIsPruningOpen] = useState(false);
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const [showCaseMetadata, setShowCaseMetadata] = useState(false);
+
+  // Workstation Mode
+  const [activeTab, setActiveTab] = useState<'graph' | 'evidence'>('graph');
 
   // Loading & Errors
   const [loading, setLoading] = useState(true);
@@ -277,80 +282,120 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
         )}
       </div>
 
-      {/* Trace Statistics Overview Bar */}
-      {graph && (
-        <TraceStatsBar
-          meta={graph.meta}
-          onOpenPruning={() => setIsPruningOpen(true)}
-          prunedCount={graph.pruned_records.length}
-        />
-      )}
+      {/* Workstation Mode Switcher */}
+      <div className="flex items-center gap-2 border-b border-police-800 pb-2">
+        <button
+          onClick={() => setActiveTab('graph')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+            activeTab === 'graph'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+              : 'bg-police-800/80 text-slate-300 hover:text-white hover:bg-police-700'
+          }`}
+        >
+          <GitBranch className="h-4 w-4" />
+          <span>Transaction Graph Canvas</span>
+        </button>
 
-      {/* Investigation Graph Workstation Area */}
-      <div className="relative flex w-full gap-4">
-        {graphLoading ? (
-          <div className="flex-1 h-[600px] bg-police-950/80 border border-police-700/80 rounded-xl flex flex-col items-center justify-center space-y-3">
-            <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
-            <p className="text-xs text-slate-400">Rendering multi-hop transaction graph...</p>
-          </div>
-        ) : traces.length === 0 ? (
-          <div className="flex-1 h-[520px] bg-police-950/60 border border-police-700/60 rounded-xl flex flex-col items-center justify-center p-8 text-center space-y-4">
-            <div className="h-16 w-16 rounded-2xl bg-blue-600/10 border border-blue-500/30 flex items-center justify-center">
-              <GitBranch className="h-8 w-8 text-blue-400" />
-            </div>
-            <div className="space-y-1.5 max-w-md">
-              <h3 className="text-base font-bold text-white">No Blockchain Traces Yet</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Begin tracing from suspect wallet <span className="font-mono text-emerald-300">{caseData.suspect_wallet || 'unspecified'}</span> across multi-hop TRC-20 USDT transactions to reveal intermediate hops and destination endpoints.
-              </p>
-            </div>
-            <button
-              onClick={() => setIsLauncherOpen(true)}
-              className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition shadow-lg shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
-            >
-              <Play className="h-4 w-4" />
-              Initiate Multi-Hop Trace
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Cytoscape Graph Canvas */}
-            <InvestigationGraphCanvas
-              graph={graph}
-              selectedNode={selectedNode}
-              selectedEdge={selectedEdge}
-              onSelectNode={(node) => {
-                setSelectedNode(node);
-                setSelectedEdge(null);
-              }}
-              onSelectEdge={(edge) => {
-                setSelectedEdge(edge);
-                setSelectedNode(null);
-              }}
-            />
-
-            {/* Docked Detail Drawer */}
-            {(selectedNode || selectedEdge) && (
-              <GraphDetailDrawer
-                selectedNode={selectedNode}
-                selectedEdge={selectedEdge}
-                onClose={() => {
-                  setSelectedNode(null);
-                  setSelectedEdge(null);
-                }}
-              />
-            )}
-          </>
-        )}
+        <button
+          onClick={() => setActiveTab('evidence')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+            activeTab === 'evidence'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+              : 'bg-police-800/80 text-slate-300 hover:text-white hover:bg-police-700'
+          }`}
+        >
+          <ShieldCheck className="h-4 w-4 text-emerald-400" />
+          <span>Evidence & Provenance</span>
+          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-police-950/80 text-slate-300 border border-police-750">
+            Section 63 BNSS
+          </span>
+        </button>
       </div>
 
-      {/* Forensic Pruning Drawer */}
-      <PruningDrawer
-        isOpen={isPruningOpen}
-        onClose={() => setIsPruningOpen(false)}
-        records={graph?.pruned_records || []}
-        minThreshold={graph?.meta.min_relevant_usd || 1.0}
-      />
+      {activeTab === 'evidence' ? (
+        <EvidenceWorkstation
+          caseId={caseData.id}
+          traceId={selectedTraceId}
+          firNumber={caseData.fir_number}
+        />
+      ) : (
+        <>
+          {/* Trace Statistics Overview Bar */}
+          {graph && (
+            <TraceStatsBar
+              meta={graph.meta}
+              onOpenPruning={() => setIsPruningOpen(true)}
+              prunedCount={graph.pruned_records.length}
+            />
+          )}
+
+          {/* Investigation Graph Workstation Area */}
+          <div className="relative flex w-full gap-4">
+            {graphLoading ? (
+              <div className="flex-1 h-[600px] bg-police-950/80 border border-police-700/80 rounded-xl flex flex-col items-center justify-center space-y-3">
+                <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
+                <p className="text-xs text-slate-400">Rendering multi-hop transaction graph...</p>
+              </div>
+            ) : traces.length === 0 ? (
+              <div className="flex-1 h-[520px] bg-police-950/60 border border-police-700/60 rounded-xl flex flex-col items-center justify-center p-8 text-center space-y-4">
+                <div className="h-16 w-16 rounded-2xl bg-blue-600/10 border border-blue-500/30 flex items-center justify-center">
+                  <GitBranch className="h-8 w-8 text-blue-400" />
+                </div>
+                <div className="space-y-1.5 max-w-md">
+                  <h3 className="text-base font-bold text-white">No Blockchain Traces Yet</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Begin tracing from suspect wallet <span className="font-mono text-emerald-300">{caseData.suspect_wallet || 'unspecified'}</span> across multi-hop TRC-20 USDT transactions to reveal intermediate hops and destination endpoints.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsLauncherOpen(true)}
+                  className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition shadow-lg shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
+                >
+                  <Play className="h-4 w-4" />
+                  Initiate Multi-Hop Trace
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Cytoscape Graph Canvas */}
+                <InvestigationGraphCanvas
+                  graph={graph}
+                  selectedNode={selectedNode}
+                  selectedEdge={selectedEdge}
+                  onSelectNode={(node) => {
+                    setSelectedNode(node);
+                    setSelectedEdge(null);
+                  }}
+                  onSelectEdge={(edge) => {
+                    setSelectedEdge(edge);
+                    setSelectedNode(null);
+                  }}
+                />
+
+                {/* Docked Detail Drawer */}
+                {(selectedNode || selectedEdge) && (
+                  <GraphDetailDrawer
+                    selectedNode={selectedNode}
+                    selectedEdge={selectedEdge}
+                    onClose={() => {
+                      setSelectedNode(null);
+                      setSelectedEdge(null);
+                    }}
+                  />
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Forensic Pruning Drawer */}
+          <PruningDrawer
+            isOpen={isPruningOpen}
+            onClose={() => setIsPruningOpen(false)}
+            records={graph?.pruned_records || []}
+            minThreshold={graph?.meta.min_relevant_usd || 1.0}
+          />
+        </>
+      )}
 
       {/* Multi-Hop Trace Launcher Modal */}
       <TraceLauncherModal
