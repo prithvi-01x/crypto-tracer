@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     TRON_API_KEY: str = ""
     TRON_USDT_CONTRACT: str = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
     BLOCKCHAIN_CACHE_TTL_SECONDS: int = 300
+    REPORTS_DIR: str = "data/reports"
     
     model_config = SettingsConfigDict(
         env_file=".env",
