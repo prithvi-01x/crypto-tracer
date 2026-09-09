@@ -95,10 +95,13 @@ class TronProvider(BlockchainProvider):
             from_addr = item.get("from", "")
             to_addr = item.get("to", "")
 
+            block_raw = item.get("block_number") if item.get("block_number") is not None else item.get("block")
+            block_number = int(block_raw) if block_raw is not None and str(block_raw).strip().isdigit() else None
+
             return Transfer(
                 chain="TRON",
                 tx_hash=tx_hash,
-                block_number=item.get("block_number"),
+                block_number=block_number,
                 timestamp=timestamp,
                 from_address=from_addr,
                 to_address=to_addr,

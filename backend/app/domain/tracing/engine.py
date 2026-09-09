@@ -10,8 +10,10 @@ from backend.app.domain.models import (
     Transfer,
     GraphNode,
     GraphEdge,
+    PrunedRecord,
     InvestigationGraph,
 )
+from backend.app.domain.tracing.pruner import RelevancePruner
 
 logger = logging.getLogger("crypto_tracer.tracing.engine")
 
@@ -20,7 +22,8 @@ class GraphEngine:
     """
     Core deterministic multi-hop transaction graph traversal engine.
     Constructs a NetworkX MultiDiGraph from normalized blockchain transfer records.
-    Enforces visited-address cycle protection, hop limits, and node/edge safety bounds.
+    Enforces visited-address cycle protection, hop limits, node/edge safety bounds,
+    and forensic relevance pruning with exact audit logging.
     """
 
     def __init__(
@@ -29,11 +32,22 @@ class GraphEngine:
         max_hops: int = 4,
         max_nodes: int = 500,
         max_edges: int = 2000,
+        min_relevant_usd: Decimal = Decimal("1.00"),
+        max_branches_per_node: int = 20,
+        target_asset: str = "USDT",
     ):
         self.provider = provider
         self.max_hops = max_hops
         self.max_nodes = max_nodes
         self.max_edges = max_edges
+        self.min_relevant_usd = Decimal(str(min_relevant_usd))
+        self.max_branches_per_node = max_branches_per_node
+        self.target_asset = target_asset
+        self.pruner = RelevancePruner(
+            min_relevant_usd=self.min_relevant_usd,
+            max_branches_per_node=self.max_branches_per_node,
+            target_asset=self.target_asset,
+        )
 
     async def trace(
         self,
@@ -62,6 +76,9 @@ class GraphEngine:
         seen_tx_keys: Set[Tuple[str, str, str, int]] = set()
         queue: deque[Tuple[str, int]] = deque([(source, 0)])
 
+        raw_transfers_fetched_count = 0
+        traversal_relevant_transfers_count = 0
+        all_pruned_records: List[PrunedRecord] = []
         bounds_hit = False
 
         while queue:
@@ -75,7 +92,7 @@ class GraphEngine:
 
             current_addr, current_hop = queue.popleft()
 
-            # Boundary: Do not expand outgoing edges from max_hops
+            # Boundary: Do not expand outgoing edges beyond max_hops
             if current_hop >= self.max_hops:
                 continue
 
@@ -95,12 +112,27 @@ class GraphEngine:
                 logger.warning(f"Error fetching transfers for address {current_addr}: {e}")
                 continue
 
-            for tx in page.transfers:
-                dest = tx.to_address.strip() if tx.to_address else ""
+            raw_transfers = page.transfers
+            raw_transfers_fetched_count += len(raw_transfers)
 
-                # Ignore empty destinations and self-transfers
+            # Filter candidate transfers: ignore empty destinations and self-transfers
+            candidate_transfers: List[Transfer] = []
+            for tx in raw_transfers:
+                dest = tx.to_address.strip() if tx.to_address else ""
                 if not dest or dest == current_addr:
                     continue
+                candidate_transfers.append(tx)
+
+            # Partition candidate transfers using RelevancePruner
+            relevant_txs, pruned_records = self.pruner.partition_transfers(
+                transfers=candidate_transfers,
+                current_hop=current_hop,
+            )
+            traversal_relevant_transfers_count += len(relevant_txs)
+            all_pruned_records.extend(pruned_records)
+
+            for tx in relevant_txs:
+                dest = tx.to_address.strip()
 
                 # Transaction deduplication per edge
                 tx_key = (tx.tx_hash, current_addr, dest, tx.amount_raw)
@@ -137,7 +169,7 @@ class GraphEngine:
                     if next_hop < self.max_hops and dest not in visited_addresses:
                         queue.append((dest, next_hop))
                 else:
-                    # Update minimum hop depth if discovered via shorter path
+                    # Deterministic minimum hop distance
                     existing_hop = G.nodes[dest].get("hop", next_hop)
                     if next_hop < existing_hop:
                         G.nodes[dest]["hop"] = next_hop
@@ -158,6 +190,9 @@ class GraphEngine:
                     timestamp=tx.timestamp,
                     block_number=tx.block_number,
                     hop=next_hop,
+                    source=tx.source,
+                    relevance_score=Decimal("1.0"),
+                    pruned=False,
                 )
 
                 # Update node volume & activity counters
@@ -203,6 +238,9 @@ class GraphEngine:
                     timestamp=data["timestamp"],
                     block_number=data.get("block_number"),
                     hop=data["hop"],
+                    source=data.get("source", "trongrid"),
+                    relevance_score=data.get("relevance_score", Decimal("1.0")),
+                    pruned=data.get("pruned", False),
                 )
             )
 
@@ -211,13 +249,26 @@ class GraphEngine:
 
         meta = {
             "source_wallet": source,
+            "max_hops": self.max_hops,
             "max_hops_configured": self.max_hops,
             "hops_reached": hops_reached,
             "total_nodes": len(nodes),
             "total_edges": len(edges),
             "visited_count": len(visited_addresses),
+            "raw_transfers_fetched_count": raw_transfers_fetched_count,
+            "traversal_relevant_transfers_count": traversal_relevant_transfers_count,
+            "edges_included_count": len(edges),
+            "pruned_transfers_count": len(all_pruned_records),
+            "pruned_nodes": len(all_pruned_records),
+            "min_relevant_usd": float(self.min_relevant_usd),
+            "max_branches_per_node": self.max_branches_per_node,
             "duration_ms": elapsed_ms,
             "bounds_hit": bounds_hit,
         }
 
-        return InvestigationGraph(nodes=nodes, edges=edges, meta=meta)
+        return InvestigationGraph(
+            nodes=nodes,
+            edges=edges,
+            pruned_records=all_pruned_records,
+            meta=meta,
+        )

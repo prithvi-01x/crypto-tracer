@@ -55,6 +55,24 @@ class GraphEdge(BaseModel):
     timestamp: datetime = Field(..., description="Transaction timestamp")
     block_number: Optional[int] = None
     hop: int = Field(1, description="Hop level of this transaction traversal")
+    source: str = Field("trongrid", description="Provider provenance")
+    relevance_score: Decimal = Field(Decimal("1.0"), description="Relevance weight [0-1]")
+    pruned: bool = Field(False, description="Whether this edge was pruned")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PrunedRecord(BaseModel):
+    tx_hash: str = Field(..., description="Transaction hash")
+    from_address: str = Field(..., description="Source address")
+    to_address: str = Field(..., description="Destination address")
+    amount: Decimal = Field(..., description="Transfer amount in token units")
+    asset: str = Field("TRC20:USDT", description="Asset")
+    hop: int = Field(..., description="Hop depth where pruning occurred")
+    reason: str = Field(..., description="Pruning reason: DUST, BRANCH_LIMIT_EXCEEDED, ASSET_MISMATCH")
+    threshold: Decimal = Field(..., description="Threshold applied")
+    timestamp: datetime = Field(..., description="Transaction timestamp")
+    source: str = Field("trongrid", description="Provider provenance")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -62,4 +80,5 @@ class GraphEdge(BaseModel):
 class InvestigationGraph(BaseModel):
     nodes: List[GraphNode]
     edges: List[GraphEdge]
+    pruned_records: List[PrunedRecord] = Field(default_factory=list)
     meta: Dict[str, Any] = Field(default_factory=dict)

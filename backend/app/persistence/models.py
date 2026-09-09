@@ -61,6 +61,7 @@ class Trace(Base):
     graph_data = Column(JSON, nullable=True)
     node_count = Column(Integer, nullable=False, default=0)
     edge_count = Column(Integer, nullable=False, default=0)
+    pruned_count = Column(Integer, nullable=False, default=0)
     duration_ms = Column(Integer, nullable=True)
 
     case = relationship("Case", back_populates="traces")

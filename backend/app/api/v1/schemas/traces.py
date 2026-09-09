@@ -26,6 +26,12 @@ class TraceStatusResponse(BaseModel):
     duration_ms: Optional[int] = None
     node_count: int = 0
     edge_count: int = 0
+    pruned_count: int = 0
+    nodes: Optional[int] = None
+    edges: Optional[int] = None
+    pruned_nodes: Optional[int] = None
+    raw_transfers_count: int = 0
+    relevant_transfers_count: int = 0
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
 

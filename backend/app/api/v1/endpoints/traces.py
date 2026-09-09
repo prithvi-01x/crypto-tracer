@@ -59,6 +59,7 @@ async def start_trace(
     engine = GraphEngine(
         provider=provider,
         max_hops=trace_in.max_hops,
+        min_relevant_usd=trace_in.min_relevant_usd,
     )
 
     # 5. Execute Graph Traversal
@@ -74,6 +75,9 @@ async def start_trace(
             duration_ms=duration_ms,
         )
 
+        meta = graph.meta or {}
+        pruned_records_count = len(graph.pruned_records)
+
         return TraceStatusResponse(
             trace_id=updated_trace.id,
             case_id=updated_trace.case_id,
@@ -85,6 +89,12 @@ async def start_trace(
             duration_ms=updated_trace.duration_ms,
             node_count=updated_trace.node_count,
             edge_count=updated_trace.edge_count,
+            pruned_count=pruned_records_count,
+            nodes=updated_trace.node_count,
+            edges=updated_trace.edge_count,
+            pruned_nodes=pruned_records_count,
+            raw_transfers_count=meta.get("raw_transfers_fetched_count", 0),
+            relevant_transfers_count=meta.get("traversal_relevant_transfers_count", 0),
             started_at=updated_trace.started_at,
             completed_at=updated_trace.completed_at,
         )
@@ -111,6 +121,9 @@ async def get_trace_status(
             detail=f"Trace '{trace_id}' not found."
         )
 
+    meta = (trace.graph_data or {}).get("meta", {})
+    pruned_count = getattr(trace, "pruned_count", 0) or meta.get("pruned_transfers_count", 0)
+
     return TraceStatusResponse(
         trace_id=trace.id,
         case_id=trace.case_id,
@@ -122,6 +135,12 @@ async def get_trace_status(
         duration_ms=trace.duration_ms,
         node_count=trace.node_count,
         edge_count=trace.edge_count,
+        pruned_count=pruned_count,
+        nodes=trace.node_count,
+        edges=trace.edge_count,
+        pruned_nodes=pruned_count,
+        raw_transfers_count=meta.get("raw_transfers_fetched_count", 0),
+        relevant_transfers_count=meta.get("traversal_relevant_transfers_count", 0),
         started_at=trace.started_at,
         completed_at=trace.completed_at,
     )

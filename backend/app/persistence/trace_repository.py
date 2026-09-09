@@ -52,6 +52,7 @@ class TraceRepository:
         trace.graph_data = graph.model_dump(mode="json")
         trace.node_count = len(graph.nodes)
         trace.edge_count = len(graph.edges)
+        trace.pruned_count = len(graph.pruned_records)
         trace.duration_ms = duration_ms
 
         await session.commit()
