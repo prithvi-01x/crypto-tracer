@@ -103,3 +103,18 @@ The platform implements an integrated 9-stage investigative pipeline:
 7. **Evidence Provenance:** Every fact and metric is logged as an immutable evidence record with cryptographic parent linkages.
 8. **Investigator Review:** The investigator inspects individual signals and formally reviews the attribution hypothesis.
 9. **Legal Drafting:** The system compiles the complete Section 63 BSA Evidence Dossier PDF and Section 94 BNSS Legal Production Notice PDF.
+
+---
+
+## Core Capabilities
+
+| Capability | Technical Description | Operational Benefit |
+|---|---|---|
+| **TRC-20 Ingestion** | Real-time TRON RPC / TronGrid HTTP integration with fallback fixture support. | Ingests live transfer logs and transaction receipts directly from TRON mainnet. |
+| **Multi-Hop BFS Traversal** | Directed graph traversal with cycle detection and configurable hop bounds (1–6 hops). | Traces funds through complex mule layering networks in under 20 milliseconds. |
+| **Dual-Mode Noise Pruning** | Combined absolute dust threshold ($100 USD) and relative tranche ratio (10%). | Eliminates visual clutter without losing track of total stolen fund volume. |
+| **VASP Attribution Engine** | 4-factor scoring heuristic combining direct tags, downstream sweep, fan-in, and timing. | Identifies exchange deposit wallets even when the specific address is unlisted. |
+| **Evidence DAG Workstation** | Cryptographic Directed Acyclic Graph tracking OBSERVED, DERIVED, and INFERRED records. | Provides full auditability and parent-child provenance for all forensic conclusions. |
+| **Canonical JSON Hashing** | RFC-8785 compliant canonical payload serialization before SHA-256 hash generation. | Guarantees deterministic, tamper-evident document and record verification. |
+| **Section 63 BSA Dossier** | Automated PDF generation including case summary, transaction ledger, and hash chains. | Meets strict electronic record admissibility requirements under Indian evidence law. |
+| **Section 94 BNSS Order** | Automated drafting of formal police production notices to exchange compliance officers. | Accelerates the formal KYC and account-freeze request process from days to minutes. |
