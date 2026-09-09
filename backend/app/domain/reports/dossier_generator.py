@@ -169,6 +169,31 @@ class EvidenceDossierGenerator:
         story.append(Spacer(1, 8))
         story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#1E293B"), spaceBefore=0, spaceAfter=8))
 
+        # Check for Partial Trace or Boundary Condition
+        is_partial = (trace.status == "PARTIAL") or graph.meta.get("is_partial", False) or (bool(graph.boundary and graph.boundary.get("is_partial")))
+        boundary_code = (graph.boundary or {}).get("code") or graph.meta.get("boundary_reached")
+        boundary_explanation = (graph.boundary or {}).get("investigator_explanation") or graph.meta.get("investigator_explanation")
+
+        if is_partial or boundary_code in ("MIXER_BOUNDARY", "BRIDGE_BOUNDARY", "PROVIDER_TIMEOUT", "PROVIDER_RATE_LIMITED", "MAX_NODES_REACHED", "MAX_EDGES_REACHED"):
+            partial_box = [[
+                Paragraph(
+                    f"<b>⚠️ PARTIAL INVESTIGATION DOSSIER — OPERATIONAL BOUNDARY: {boundary_code or 'PARTIAL_SEARCH'}</b><br/>"
+                    f"<font size='7.5' color='#92400E'>{boundary_explanation or 'Traversal was halted by an operational boundary. Discovered multi-hop paths and evidence items are preserved for the explored subset.'}</font>",
+                    notice_style,
+                )
+            ]]
+            partial_table = Table(partial_box, colWidths=[532])
+            partial_table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FEF3C7")),
+                ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#F59E0B")),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ]))
+            story.append(partial_table)
+            story.append(Spacer(1, 8))
+
         # -------------------------------------------------------------
         # 2. CASE & INVESTIGATION METADATA TABLE
         # -------------------------------------------------------------

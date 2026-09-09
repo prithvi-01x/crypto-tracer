@@ -86,18 +86,29 @@ async def generate_evidence_dossier(
         await EvidenceRepository.save_evidence_items(db, evidence_items)
 
     # 3. Generate PDF
-    pdf_bytes, report_hash, meta = EvidenceDossierGenerator.generate_pdf(
-        case=case,
-        trace=trace,
-        graph=graph,
-        attribution_report=attribution_report,
-        evidence_items=evidence_items,
-        investigator_name=request.investigator_name,
-        investigator_rank=request.investigator_rank,
-        police_station=request.police_station,
-        include_graph_snapshot=request.include_graph_snapshot,
-        notes=request.notes,
-    )
+    try:
+        pdf_bytes, report_hash, meta = EvidenceDossierGenerator.generate_pdf(
+            case=case,
+            trace=trace,
+            graph=graph,
+            attribution_report=attribution_report,
+            evidence_items=evidence_items,
+            investigator_name=request.investigator_name,
+            investigator_rank=request.investigator_rank,
+            police_station=request.police_station,
+            include_graph_snapshot=request.include_graph_snapshot,
+            notes=request.notes,
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate evidence dossier: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "REPORT_GENERATION_FAILED",
+                "message": f"Evidence dossier compilation failed: {e}",
+                "case_id": case_id,
+            }
+        )
 
     # 4. Persist PDF file to disk
     report_id = str(uuid.uuid4())
@@ -198,21 +209,77 @@ async def generate_bnss94_draft(
         engine = AttributionEngine()
         attribution_report = engine.evaluate_trace(trace_id=trace.id, graph=graph)
 
+        # Boundary checks for Section 94 BNSS requisitions
+        if not request.target_vasp:
+            # If trace has no transactions
+            if len(graph.edges) == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "NO_TRANSFERS_FOUND",
+                        "message": "Cannot generate Section 94 BNSS notice: Trace contains no on-chain transactions or VASP endpoints to requisition.",
+                    }
+                )
+
+            if attribution_report and attribution_report.best_candidate:
+                best = attribution_report.best_candidate
+                if best.entity_category == "mixer" or best.vasp_id == "mixer":
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "code": "MIXER_BOUNDARY",
+                            "message": (
+                                "Cannot generate Section 94 BNSS notice: Target address is a decentralized privacy mixer/tumbler "
+                                "with no custodial entity or KYC records to requisition."
+                            ),
+                        }
+                    )
+                if best.vasp_id in ("unknown_entity", "unidentified") or best.confidence < 0.40 or best.is_low_confidence:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "code": "LOW_CONFIDENCE",
+                            "message": (
+                                "Cannot generate Section 94 BNSS notice: Attribution confidence is insufficient. "
+                                "Target address remains an unhosted or unidentified wallet with no verified VASP custodian."
+                            ),
+                        }
+                    )
+            elif not attribution_report or not attribution_report.best_candidate:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "NO_VASP_FOUND",
+                        "message": "Cannot generate Section 94 BNSS notice: No candidate VASP identified in the transaction graph.",
+                    }
+                )
+
     # 2. Generate PDF
-    pdf_bytes, report_hash, meta = BNSS94DraftGenerator.generate_pdf(
-        case=case,
-        trace=trace,
-        attribution_report=attribution_report,
-        target_vasp_override=request.target_vasp,
-        candidate_address_override=request.candidate_address,
-        investigator_name=request.investigator_name,
-        investigator_rank=request.investigator_rank,
-        police_station=request.police_station,
-        court_jurisdiction=request.court_jurisdiction,
-        compliance_email=request.compliance_email,
-        urgency_hours=request.urgency_hours,
-        notes=request.notes,
-    )
+    try:
+        pdf_bytes, report_hash, meta = BNSS94DraftGenerator.generate_pdf(
+            case=case,
+            trace=trace,
+            attribution_report=attribution_report,
+            target_vasp_override=request.target_vasp,
+            candidate_address_override=request.candidate_address,
+            investigator_name=request.investigator_name,
+            investigator_rank=request.investigator_rank,
+            police_station=request.police_station,
+            court_jurisdiction=request.court_jurisdiction,
+            compliance_email=request.compliance_email,
+            urgency_hours=request.urgency_hours,
+            notes=request.notes,
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate Section 94 notice: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "REPORT_GENERATION_FAILED",
+                "message": f"Section 94 BNSS notice compilation failed: {e}",
+                "case_id": case_id,
+            }
+        )
 
     # 3. Persist PDF file to disk
     report_id = str(uuid.uuid4())
