@@ -25,6 +25,7 @@ from backend.app.domain.evidence.hasher import compute_content_hash
 class BNSSCanvas(canvas.Canvas):
     """Running header and footer for legal draft notice."""
     def __init__(self, *args, **kwargs):
+        kwargs["pageCompression"] = 0
         super().__init__(*args, **kwargs)
         self._saved_page_states = []
 
@@ -97,6 +98,7 @@ class BNSS94DraftGenerator:
             rightMargin=40,
             topMargin=48,
             bottomMargin=50,
+            pageCompression=0,
         )
 
         styles = getSampleStyleSheet()

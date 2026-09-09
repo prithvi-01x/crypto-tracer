@@ -30,6 +30,7 @@ from backend.app.domain.evidence.hasher import compute_content_hash
 class NumberedCanvas(canvas.Canvas):
     """Two-pass canvas to calculate total page count and draw running header/footer."""
     def __init__(self, *args, **kwargs):
+        kwargs["pageCompression"] = 0
         super().__init__(*args, **kwargs)
         self._saved_page_states = []
 
@@ -99,6 +100,7 @@ class EvidenceDossierGenerator:
             rightMargin=40,
             topMargin=48,
             bottomMargin=50,
+            pageCompression=0,
         )
 
         styles = getSampleStyleSheet()
