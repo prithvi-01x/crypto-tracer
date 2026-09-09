@@ -6,14 +6,14 @@ from backend.app.domain.models import InvestigationGraph
 
 
 class TraceCreateRequest(BaseModel):
-    case_id: str = Field(..., description="Associated case UUID", json_schema_extra={"example": "d61da092-8a26-47dd-9bbb-471a508bf2a2"})
-    chain: str = Field("TRON", description="Target blockchain", json_schema_extra={"example": "TRON"})
-    input_type: str = Field("address", description="Input type ('address' or 'tx_hash')", json_schema_extra={"example": "address"})
-    input: str = Field(..., description="Target wallet address or transaction ID", json_schema_extra={"example": "TYDZSxdBzWnCuB4jF3K6j5X3qW7b9X1234"})
-    asset: str = Field("TRC20:USDT", description="Target asset identifier", json_schema_extra={"example": "TRC20:USDT"})
-    max_hops: int = Field(4, ge=1, le=10, description="Maximum graph traversal depth", json_schema_extra={"example": 4})
-    min_relevant_usd: Decimal = Field(Decimal("1.00"), ge=0, description="Minimum relevant transfer value", json_schema_extra={"example": 1.00})
-    execution_mode: str = Field("DEMO", description="Execution mode: 'DEMO' (deterministic fixture replay) or 'LIVE' (real-time blockchain query)")
+    case_id: str = Field(..., min_length=1, max_length=64, description="Associated case UUID", json_schema_extra={"example": "d61da092-8a26-47dd-9bbb-471a508bf2a2"})
+    chain: str = Field("TRON", min_length=2, max_length=20, description="Target blockchain", json_schema_extra={"example": "TRON"})
+    input_type: str = Field("address", pattern="^(address|tx_hash)$", description="Input type ('address' or 'tx_hash')", json_schema_extra={"example": "address"})
+    input: str = Field(..., min_length=1, max_length=128, description="Target wallet address or transaction ID", json_schema_extra={"example": "TYDZSxdBzWnCuB4jF3K6j5X3qW7b9X1234"})
+    asset: str = Field("TRC20:USDT", min_length=2, max_length=32, description="Target asset identifier", json_schema_extra={"example": "TRC20:USDT"})
+    max_hops: int = Field(4, ge=1, le=6, description="Maximum graph traversal depth (1 to 6)", json_schema_extra={"example": 4})
+    min_relevant_usd: Decimal = Field(Decimal("1.00"), ge=0, le=1000000, description="Minimum relevant transfer value", json_schema_extra={"example": 1.00})
+    execution_mode: str = Field("DEMO", pattern="^(DEMO|LIVE)$", description="Execution mode: 'DEMO' or 'LIVE'")
 
 
 class TraceStatusResponse(BaseModel):

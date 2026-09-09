@@ -32,7 +32,11 @@ router = APIRouter(tags=["Reports & Legal Export"])
 
 
 def _ensure_report_dir(case_id: str) -> str:
-    dir_path = os.path.join(settings.REPORTS_DIR, case_id)
+    safe_case_id = "".join(c for c in case_id if c.isalnum() or c in ("-", "_"))
+    base_dir = os.path.abspath(settings.REPORTS_DIR)
+    dir_path = os.path.abspath(os.path.join(base_dir, safe_case_id))
+    if not dir_path.startswith(base_dir):
+        raise ValueError(f"Invalid case directory path: {case_id}")
     os.makedirs(dir_path, exist_ok=True)
     return dir_path
 
@@ -441,6 +445,14 @@ async def download_report_pdf(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Report file on disk could not be located."
+        )
+
+    base_dir = os.path.abspath(settings.REPORTS_DIR)
+    abs_file_path = os.path.abspath(report.file_path)
+    if not abs_file_path.startswith(base_dir):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to specified report path is denied."
         )
 
     filename = os.path.basename(report.file_path)
