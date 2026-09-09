@@ -530,3 +530,37 @@ npm run dev
 The application will be accessible at:
 - **Frontend Workstation:** `http://localhost:5173`
 - **Backend API & Swagger Docs:** `http://localhost:8000/api/v1/docs`
+
+---
+
+## Docker Compose Deployment
+
+The complete multi-service stack can be deployed with a single command:
+
+```bash
+# Build and start all services in the background
+docker compose up --build -d
+```
+
+### Verified Service Endpoints
+| Service | Host Port | Internal Port | Healthcheck Endpoint |
+|---|---|---|---|
+| **Frontend Workstation** | `5173` | `80` | `http://localhost:5173` |
+| **Backend API** | `8000` | `8000` | `http://localhost:8000/api/v1/health` |
+| **PostgreSQL 16** | `5432` | `5432` | `pg_isready -U postgres -d crypto_tracer` |
+| **Redis 7** | `6380` | `6379` | `redis-cli ping` |
+
+### Management Commands
+```bash
+# Check service status
+docker compose ps
+
+# View backend logs in real-time
+docker compose logs -f backend
+
+# Stop all containers
+docker compose down
+
+# Clean teardown including database volumes
+docker compose down -v
+```
