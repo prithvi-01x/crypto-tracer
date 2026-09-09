@@ -20,14 +20,19 @@ from backend.app.adapters.base import (
 logger = logging.getLogger("crypto_tracer.adapters.tron")
 
 
+import re
+
+TRON_ADDRESS_REGEX = re.compile(r"^T[1-9A-HJ-NP-Za-km-z]{33}$")
+
+
 def validate_tron_address(address: str) -> bool:
     """
-    Validate basic TRON address format (Base58Check starts with 'T', 34 chars).
+    Validate TRON address format (Base58Check starts with 'T', 34 chars, Base58 alphabet).
     """
     if not address or not isinstance(address, str):
         return False
     clean = address.strip()
-    return len(clean) == 34 and clean.startswith("T")
+    return bool(TRON_ADDRESS_REGEX.match(clean))
 
 
 class TronProvider(BlockchainProvider):
