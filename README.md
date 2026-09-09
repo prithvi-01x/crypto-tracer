@@ -118,3 +118,21 @@ The platform implements an integrated 9-stage investigative pipeline:
 | **Canonical JSON Hashing** | RFC-8785 compliant canonical payload serialization before SHA-256 hash generation. | Guarantees deterministic, tamper-evident document and record verification. |
 | **Section 63 BSA Dossier** | Automated PDF generation including case summary, transaction ledger, and hash chains. | Meets strict electronic record admissibility requirements under Indian evidence law. |
 | **Section 94 BNSS Order** | Automated drafting of formal police production notices to exchange compliance officers. | Accelerates the formal KYC and account-freeze request process from days to minutes. |
+
+---
+
+## Blockchain Layer: TRON & TRC-20 USDT Tracing
+
+Over 90% of contemporary cyber-financial crime reported on the Indian National Cyber Crime Reporting Portal (1930) involves Tether USD (USDT) on the TRON blockchain. The TRON network is preferred by illicit syndicates due to its minimal network fees (approx. $1–$2 per transfer) and rapid block confirmation times (approx. 3 seconds).
+
+### Smart Contract Transfer Event Decoding
+USDT on TRON is implemented as a TRC-20 token contract at address `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`. Fund transfers occur through smart contract `triggerconstantcontract` or `triggersmartcontract` calls triggering the standardized `Transfer` event:
+
+$$\text{Transfer}(\text{address indexed from}, \text{address indexed to}, \text{uint256 value})$$
+
+### Address Encoding & Representation
+TRON uses dual address formats:
+- **Base58Check Format:** Human-readable addresses starting with `T` (e.g., `TSuspectScamRootWallet111111111111`), carrying a 4-byte checksum.
+- **Hexadecimal Format:** 42-character raw byte string starting with `41` (the TRON mainnet address prefix byte, corresponding to Ethereum's `0x`).
+
+Crypto-Tracer normalizes all addresses to Base58Check across the API and persistence layers, performing cryptographic checksum verification on every ingested input.
