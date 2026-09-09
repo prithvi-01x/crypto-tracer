@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.app.persistence.models import Trace
@@ -82,3 +82,9 @@ class TraceRepository:
         query = select(Trace).where(Trace.id == trace_id)
         result = await session.execute(query)
         return result.scalars().first()
+
+    @staticmethod
+    async def list_by_case_id(session: AsyncSession, case_id: str) -> List[Trace]:
+        query = select(Trace).where(Trace.case_id == case_id).order_by(Trace.started_at.desc())
+        result = await session.execute(query)
+        return list(result.scalars().all())

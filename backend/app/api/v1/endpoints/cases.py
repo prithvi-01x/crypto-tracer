@@ -3,7 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.persistence.db import get_db
 from backend.app.persistence.case_repository import CaseRepository
+from backend.app.persistence.trace_repository import TraceRepository
 from backend.app.api.v1.schemas.cases import CaseCreate, CaseResponse, CaseListResponse
+from backend.app.api.v1.schemas.traces import TraceStatusResponse
 
 router = APIRouter(prefix="/cases", tags=["Cases"])
 
@@ -95,3 +97,48 @@ async def get_case(
         updated_at=case.updated_at,
         trace_count=len(case.traces) if hasattr(case, "traces") and case.traces else 0,
     )
+
+
+@router.get("/{case_id}/traces", response_model=List[TraceStatusResponse])
+async def list_traces_for_case(
+    case_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    List all transaction traces executed for a specific case.
+    """
+    case = await CaseRepository.get_by_id(db, case_id)
+    if not case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Investigation case '{case_id}' not found."
+        )
+
+    traces = await TraceRepository.list_by_case_id(db, case_id)
+    results = []
+    for t in traces:
+        meta = (t.graph_data or {}).get("meta", {})
+        pruned_count = getattr(t, "pruned_count", 0) or meta.get("pruned_transfers_count", 0)
+        results.append(
+            TraceStatusResponse(
+                trace_id=t.id,
+                case_id=t.case_id,
+                status=t.status,
+                chain=t.chain,
+                input_value=t.input_value,
+                asset=t.asset,
+                max_hops=t.max_hops,
+                duration_ms=t.duration_ms,
+                node_count=t.node_count,
+                edge_count=t.edge_count,
+                pruned_count=pruned_count,
+                nodes=t.node_count,
+                edges=t.edge_count,
+                pruned_nodes=pruned_count,
+                raw_transfers_count=meta.get("raw_transfers_fetched_count", 0),
+                relevant_transfers_count=meta.get("traversal_relevant_transfers_count", 0),
+                started_at=t.started_at,
+                completed_at=t.completed_at,
+            )
+        )
+    return results

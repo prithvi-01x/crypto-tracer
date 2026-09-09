@@ -92,3 +92,21 @@ async def test_create_case_missing_required_fir(async_client: AsyncClient):
     }
     response = await async_client.post("/api/v1/cases", json=payload)
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_list_traces_for_case(async_client: AsyncClient):
+    # 1. Create a case
+    create_payload = {
+        "fir_number": "2026/TRACES_LIST",
+        "victim_reference": "TRACE-LIST-USER",
+        "loss_amount_inr": 150000.00,
+    }
+    case_res = await async_client.post("/api/v1/cases", json=create_payload)
+    assert case_res.status_code == 201
+    case_id = case_res.json()["id"]
+
+    # 2. Initially 0 traces
+    traces_res = await async_client.get(f"/api/v1/cases/{case_id}/traces")
+    assert traces_res.status_code == 200
+    assert traces_res.json() == []
