@@ -35,3 +35,15 @@ Investigating Officers face three severe operational bottlenecks:
 1. **Investigation Latency:** Manual tracing across public block explorers takes hours or days. By the time an investigator manually identifies an exchange deposit address, the fraudsters have already liquidated the assets into fiat via P2P markets or withdrawn them.
 2. **Micro-Dust Transaction Noise:** Syndicates intentionally inject dozens of low-value transfers ($0.10 to $0.80) to confuse automated scrapers, create exponential branching in visual graph tools, and exhaust investigator bandwidth.
 3. **Evidentiary Inadmissibility:** Screenshots of block explorer web pages lack cryptographic hash integrity, tamper verification, and compliance with statutory standards required in Indian criminal courts.
+
+---
+
+## The Solution
+
+Crypto-Tracer replaces ad-hoc block explorer lookups with an integrated forensic pipeline:
+
+- **Automated Multi-Hop Traversal:** Recursively traces TRC-20 USDT transfers up to 4 hops downstream from root suspect addresses in sub-second execution time.
+- **Relevance-Aware Noise Pruning:** Automatically isolates the primary illicit money trail by filtering out micro-dust transfers and secondary operational noise while preserving complete conservation of funds in audit ledgers.
+- **Multi-Factor VASP Attribution Heuristics:** Evaluates candidate deposit addresses against exchange sweep consolidation ratios, fan-in convergence, and programmatic temporal delays to identify likely custodial endpoints.
+- **Cryptographic Evidence DAG:** Secures every observed transaction, derived metric, and attribution hypothesis into a tamper-evident Directed Acyclic Graph with RFC-8785 canonical JSON payloads and SHA-256 content hashes.
+- **Automated Statutory Legal Drafting:** Instantly generates court-admissible Section 63 BSA Evidence Dossiers and ready-to-serve Section 94 BNSS production orders for law enforcement officers.
