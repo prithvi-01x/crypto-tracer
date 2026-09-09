@@ -635,3 +635,18 @@ Forensic integrity requires transparent communication of analytical boundaries:
 2. **Cross-Chain Bridge Boundaries:** Traversal is currently optimized for TRON (TRC-20 USDT). If funds enter a cross-chain bridge contract (e.g., to Ethereum or BSC), the bridge is flagged as a terminal boundary node.
 3. **Off-Chain Fiat Settlement:** On-chain tracing tracks tokens up to the custodial exchange deposit address. Final fiat bank payouts occur through off-chain banking rails (IMPS, UPI, NEFT) accessible only via Section 94 BNSS legal orders served on the exchange.
 4. **Client State Persistence:** In the current single-page React workstation, refreshing the browser (F5) reloads the application to the Case Register table. All cases, traces, evidence DAGs, and generated reports remain 100% persisted in PostgreSQL.
+
+---
+
+## Roadmap, Contributing & License
+
+### Roadmap
+- **Phase 12 (EVM Expansion):** Multi-hop fund flow tracing for Ethereum, Polygon, and Arbitrum USDT/USDC.
+- **Phase 13 (Bitcoin UTXO Engine):** Common-input-ownership clustering and change-address detection for Bitcoin (BTC) investigations.
+- **Phase 14 (Automated Portal Ingestion):** Automated intake integration with the Indian National Cybercrime Reporting Portal (1930) API.
+
+### Contributing
+Contributions to the VASP directory and attribution heuristic models are welcome. Please ensure all pull requests include corresponding unit tests and satisfy `flake8` and `npm run lint` standards.
+
+### License
+This project is developed for the Smart India Hackathon (SIH 2026) under the Apache 2.0 License.
