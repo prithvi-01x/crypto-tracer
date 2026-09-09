@@ -6,11 +6,17 @@ import {
   Server, 
   UserCheck, 
   RefreshCw, 
-  CheckCircle2, 
   AlertCircle,
   Activity,
-  FileCode2
+  FileCode2,
+  FolderLock,
+  Plus
 } from 'lucide-react';
+import type { CaseItem } from './types/case';
+import { getCases } from './api/cases';
+import { CaseListView } from './components/cases/CaseListView';
+import { CaseDetailsView } from './components/cases/CaseDetailsView';
+import { NewCaseModal } from './components/cases/NewCaseModal';
 
 interface ServiceHealth {
   status: string;
@@ -40,52 +46,70 @@ interface OfficerSession {
 }
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<'investigations' | 'diagnostics'>('investigations');
+  const [cases, setCases] = useState<CaseItem[]>([]);
+  const [casesLoading, setCasesLoading] = useState<boolean>(true);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [isNewCaseOpen, setIsNewCaseOpen] = useState<boolean>(false);
+
   const [health, setHealth] = useState<HealthData | null>(null);
   const [officer, setOfficer] = useState<OfficerSession | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingHealth, setLoadingHealth] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastCheck, setLastCheck] = useState<string>('');
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+  const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
 
-  const fetchSystemStatus = async () => {
-    setLoading(true);
-    setError(null);
+  const loadCases = async () => {
+    setCasesLoading(true);
+    try {
+      const data = await getCases();
+      setCases(data.cases);
+    } catch (err: any) {
+      console.error('Failed to load cases:', err);
+      setError(err.message || 'Failed to fetch cases from database');
+    } finally {
+      setCasesLoading(false);
+    }
+  };
+
+  const fetchDiagnostics = async () => {
+    setLoadingHealth(true);
     try {
       const [healthRes, officerRes] = await Promise.all([
         fetch(`${apiUrl}/health`),
         fetch(`${apiUrl}/auth/me`),
       ]);
 
-      if (!healthRes.ok) {
-        throw new Error(`Health API responded with status ${healthRes.status}`);
+      if (healthRes.ok) {
+        const hJson = await healthRes.json();
+        setHealth(hJson);
       }
-      if (!officerRes.ok) {
-        throw new Error(`Auth API responded with status ${officerRes.status}`);
+      if (officerRes.ok) {
+        const oJson = await officerRes.json();
+        setOfficer(oJson);
       }
-
-      const healthJson = await healthRes.json();
-      const officerJson = await officerRes.json();
-
-      setHealth(healthJson);
-      setOfficer(officerJson);
-      setLastCheck(new Date().toLocaleTimeString());
     } catch (err: any) {
-      console.error('Failed to communicate with backend:', err);
-      setError(err.message || 'Failed to connect to backend service');
+      console.error('Health check failed:', err);
     } finally {
-      setLoading(false);
+      setLoadingHealth(false);
     }
   };
 
   useEffect(() => {
-    fetchSystemStatus();
+    loadCases();
+    fetchDiagnostics();
   }, []);
+
+  const handleCaseCreated = (newCaseId: string) => {
+    loadCases();
+    setSelectedCaseId(newCaseId);
+    setActiveTab('investigations');
+  };
 
   return (
     <div className="min-h-screen bg-police-900 text-slate-100 flex flex-col font-sans">
       {/* Top Navigation Bar */}
-      <header className="border-b border-police-700/80 bg-police-800/90 px-6 py-3.5 backdrop-blur sticky top-0 z-50">
+      <header className="border-b border-police-700/80 bg-police-800/90 px-6 py-3 backdrop-blur sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -97,19 +121,47 @@ export default function App() {
                 <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded">
                   SIH 2026 #SIH26182
                 </span>
-                <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded">
-                  PHASE 0: FOUNDATION
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded">
+                  PHASE 1: CASE MANAGEMENT
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Automated VASP Attribution & Forensic Trace Workstation
+                District Cyber Crime Cell • Forensic Investigation Workstation
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* View Switcher */}
+            <div className="flex rounded-lg bg-police-900 p-1 border border-police-700/70 text-xs">
+              <button
+                onClick={() => {
+                  setActiveTab('investigations');
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition ${
+                  activeTab === 'investigations'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <FolderLock className="h-3.5 w-3.5" />
+                Case Workspace
+              </button>
+              <button
+                onClick={() => setActiveTab('diagnostics')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition ${
+                  activeTab === 'diagnostics'
+                    ? 'bg-police-700 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Activity className="h-3.5 w-3.5" />
+                Stack Health
+              </button>
+            </div>
+
             {officer && (
-              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-police-700/60 border border-police-600/50 text-xs">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-police-700/60 border border-police-600/50 text-xs">
                 <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                 <div>
                   <div className="font-semibold text-slate-200">{officer.name}</div>
@@ -117,13 +169,13 @@ export default function App() {
                 </div>
               </div>
             )}
+
             <button
-              onClick={fetchSystemStatus}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition disabled:opacity-50 shadow"
+              onClick={() => setIsNewCaseOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition shadow-lg shadow-blue-500/20"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Verify Backend
+              <Plus className="h-4 w-4" />
+              New Case
             </button>
           </div>
         </div>
@@ -135,182 +187,126 @@ export default function App() {
         {error && (
           <div className="p-4 rounded-xl bg-red-950/50 border border-red-800 text-red-200 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-sm">Backend Connectivity Issue</h3>
+            <div className="flex-1">
+              <h3 className="font-semibold text-sm">System Alert</h3>
               <p className="text-xs text-red-300 mt-1">{error}</p>
-              <p className="text-xs text-slate-400 mt-1">
-                Make sure the FastAPI backend is running at <code className="text-amber-400">{apiUrl}</code>.
-              </p>
             </div>
+            <button 
+              onClick={() => setError(null)}
+              className="text-xs text-red-400 hover:text-white underline"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
-        {/* Phase 0 Status Banner */}
-        <div className="p-5 rounded-xl bg-police-800/60 border border-police-700/80 shadow-md">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white">System Architecture & Core Contract Verification</h2>
-                <span className="text-xs text-slate-400">
-                  {lastCheck ? `Checked at ${lastCheck}` : 'Checking...'}
-                </span>
+        {/* Dynamic Content based on active view */}
+        {activeTab === 'investigations' ? (
+          selectedCaseId ? (
+            <CaseDetailsView
+              caseId={selectedCaseId}
+              onBack={() => {
+                setSelectedCaseId(null);
+                loadCases();
+              }}
+            />
+          ) : (
+            <CaseListView
+              cases={cases}
+              loading={casesLoading}
+              onSelectCase={(id) => setSelectedCaseId(id)}
+              onOpenNewCase={() => setIsNewCaseOpen(true)}
+              onRefresh={loadCases}
+            />
+          )
+        ) : (
+          /* Diagnostics View (Preserved from Phase 0) */
+          <div className="space-y-6">
+            <div className="p-5 rounded-xl bg-police-800/60 border border-police-700/80 shadow-md flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-white">Stack Infrastructure Verification</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Active connection to PostgreSQL relational store, Redis in-memory broker, and FastAPI modular monolith.
+                </p>
               </div>
-              <p className="text-xs text-slate-400 mt-1">
-                Phase 0 establishes the modular monolith foundation, Docker stack, PostgreSQL persistence, Redis cache/queue, and verified frontend ↔ backend communication.
-              </p>
+              <button
+                onClick={fetchDiagnostics}
+                disabled={loadingHealth}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded bg-police-700 hover:bg-police-600 text-white"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loadingHealth ? 'animate-spin' : ''}`} />
+                Re-check Health
+              </button>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-400">Stack Status:</span>
-              <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
-                health?.status === 'HEALTHY' 
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
-                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-              }`}>
-                {health?.status || 'INITIALIZING'}
-              </span>
-            </div>
-          </div>
-        </div>
 
-        {/* 4 Service Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: FastAPI */}
-          <div className="p-4 rounded-xl bg-police-800/80 border border-police-700/70 hover:border-police-600 transition">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Server className="h-4 w-4 text-blue-400" />
-                <span className="text-xs font-semibold uppercase text-slate-400">API Gateway</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-police-800/80 border border-police-700/70">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold uppercase text-slate-400">FastAPI</span>
+                  <Server className="h-4 w-4 text-blue-400" />
+                </div>
+                <div className="text-sm font-bold text-white">v0.1.0 Online</div>
+                <div className="text-xs text-slate-400 mt-1">{health?.environment || 'development'}</div>
               </div>
-              {health ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              ) : (
-                <AlertCircle className="h-4 w-4 text-amber-400" />
-              )}
-            </div>
-            <div className="text-sm font-bold text-white">FastAPI v0.1.0</div>
-            <div className="text-xs text-slate-400 mt-1">REST OpenAPI 3.1</div>
-            <div className="mt-3 pt-3 border-t border-police-700/50 flex items-center justify-between text-xs text-slate-400">
-              <span>Environment:</span>
-              <span className="font-mono text-slate-300">{health?.environment || 'development'}</span>
-            </div>
-          </div>
 
-          {/* Card 2: PostgreSQL */}
-          <div className="p-4 rounded-xl bg-police-800/80 border border-police-700/70 hover:border-police-600 transition">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Database className="h-4 w-4 text-emerald-400" />
-                <span className="text-xs font-semibold uppercase text-slate-400">Relational DB</span>
+              <div className="p-4 rounded-xl bg-police-800/80 border border-police-700/70">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold uppercase text-slate-400">PostgreSQL</span>
+                  <Database className="h-4 w-4 text-emerald-400" />
+                </div>
+                <div className="text-sm font-bold text-white">
+                  {health?.services?.database?.status === 'HEALTHY' ? 'Connected' : 'Degraded'}
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  Latency: {health?.services?.database?.latency_ms ?? 'N/A'} ms
+                </div>
               </div>
-              {health?.services?.database?.status === 'HEALTHY' ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              ) : (
-                <AlertCircle className="h-4 w-4 text-amber-400" />
-              )}
-            </div>
-            <div className="text-sm font-bold text-white">PostgreSQL 16</div>
-            <div className="text-xs text-slate-400 mt-1">SQLAlchemy Async Engine</div>
-            <div className="mt-3 pt-3 border-t border-police-700/50 flex items-center justify-between text-xs text-slate-400">
-              <span>Latency:</span>
-              <span className="font-mono text-slate-300">
-                {health?.services?.database?.latency_ms !== undefined 
-                  ? `${health.services.database.latency_ms} ms` 
-                  : 'N/A'}
-              </span>
-            </div>
-          </div>
 
-          {/* Card 3: Redis */}
-          <div className="p-4 rounded-xl bg-police-800/80 border border-police-700/70 hover:border-police-600 transition">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-amber-400" />
-                <span className="text-xs font-semibold uppercase text-slate-400">Cache / Queue</span>
+              <div className="p-4 rounded-xl bg-police-800/80 border border-police-700/70">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold uppercase text-slate-400">Redis</span>
+                  <Zap className="h-4 w-4 text-amber-400" />
+                </div>
+                <div className="text-sm font-bold text-white">
+                  {health?.services?.redis?.status === 'HEALTHY' ? 'Connected' : 'Degraded'}
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  Latency: {health?.services?.redis?.latency_ms ?? 'N/A'} ms
+                </div>
               </div>
-              {health?.services?.redis?.status === 'HEALTHY' ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              ) : (
-                <AlertCircle className="h-4 w-4 text-amber-400" />
-              )}
-            </div>
-            <div className="text-sm font-bold text-white">Redis 7 (Async)</div>
-            <div className="text-xs text-slate-400 mt-1">Trace Cache & Rate Limits</div>
-            <div className="mt-3 pt-3 border-t border-police-700/50 flex items-center justify-between text-xs text-slate-400">
-              <span>Latency:</span>
-              <span className="font-mono text-slate-300">
-                {health?.services?.redis?.latency_ms !== undefined 
-                  ? `${health.services.redis.latency_ms} ms` 
-                  : 'N/A'}
-              </span>
-            </div>
-          </div>
 
-          {/* Card 4: Officer Context */}
-          <div className="p-4 rounded-xl bg-police-800/80 border border-police-700/70 hover:border-police-600 transition">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <UserCheck className="h-4 w-4 text-purple-400" />
-                <span className="text-xs font-semibold uppercase text-slate-400">Mock Session</span>
+              <div className="p-4 rounded-xl bg-police-800/80 border border-police-700/70">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold uppercase text-slate-400">Officer Context</span>
+                  <UserCheck className="h-4 w-4 text-purple-400" />
+                </div>
+                <div className="text-sm font-bold text-white">{officer?.badge_number || 'CYBER-DELHI-4029'}</div>
+                <div className="text-xs text-slate-400 mt-1">{officer?.role || 'INVESTIGATING_OFFICER'}</div>
               </div>
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
             </div>
-            <div className="text-sm font-bold text-white">{officer?.badge_number || 'CYBER-DELHI-4029'}</div>
-            <div className="text-xs text-slate-400 mt-1">{officer?.role || 'INVESTIGATING_OFFICER'}</div>
-            <div className="mt-3 pt-3 border-t border-police-700/50 flex items-center justify-between text-xs text-slate-400">
-              <span>State:</span>
-              <span className="text-emerald-400 font-semibold">AUTHENTICATED</span>
-            </div>
-          </div>
-        </div>
 
-        {/* Live Health JSON Inspection Panel */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="p-5 rounded-xl bg-police-800/50 border border-police-700/70">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <FileCode2 className="h-4 w-4 text-blue-400" />
-                <h3 className="text-sm font-bold text-white">Live Backend Contract Payload</h3>
+            <div className="p-5 rounded-xl bg-police-800/50 border border-police-700/70">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <FileCode2 className="h-4 w-4 text-blue-400" />
+                  <h3 className="text-sm font-bold text-white">Live Health Payload</h3>
+                </div>
+                <span className="text-xs font-mono text-slate-400">GET /api/v1/health</span>
               </div>
-              <span className="text-[11px] font-mono text-slate-400">GET /api/v1/health</span>
-            </div>
-            <pre className="p-3 rounded-lg bg-police-900/90 border border-police-700/50 text-xs font-mono text-emerald-300 overflow-x-auto max-h-60">
-              {health ? JSON.stringify(health, null, 2) : 'Connecting...'}
-            </pre>
-          </div>
-
-          <div className="p-5 rounded-xl bg-police-800/50 border border-police-700/70">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-amber-400" />
-                <h3 className="text-sm font-bold text-white">Implementation Pipeline Roadmap</h3>
-              </div>
-              <span className="text-[11px] text-slate-400">Source: PHASES.md</span>
-            </div>
-            <div className="space-y-2 text-xs">
-              <div className="p-2 rounded bg-police-700/40 border border-emerald-500/40 flex items-center justify-between">
-                <span className="font-semibold text-emerald-300">Phase 0: Project Foundation</span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">COMPLETE</span>
-              </div>
-              <div className="p-2 rounded bg-police-900/40 border border-police-700/40 flex items-center justify-between opacity-75">
-                <span className="text-slate-300">Phase 1: Case Management & Intake</span>
-                <span className="text-slate-500 text-[10px]">NEXT PHASE</span>
-              </div>
-              <div className="p-2 rounded bg-police-900/40 border border-police-700/40 flex items-center justify-between opacity-50">
-                <span className="text-slate-400">Phase 2: TRON TRC-20 Data Ingestion</span>
-                <span className="text-slate-500 text-[10px]">QUEUED</span>
-              </div>
-              <div className="p-2 rounded bg-police-900/40 border border-police-700/40 flex items-center justify-between opacity-50">
-                <span className="text-slate-400">Phase 3-5: BFS Graph & Pruning Engine</span>
-                <span className="text-slate-500 text-[10px]">QUEUED</span>
-              </div>
-              <div className="p-2 rounded bg-police-900/40 border border-police-700/40 flex items-center justify-between opacity-50">
-                <span className="text-slate-400">Phase 6-8: Explainable VASP Attribution & BNSS 94</span>
-                <span className="text-slate-500 text-[10px]">QUEUED</span>
-              </div>
+              <pre className="p-3 rounded-lg bg-police-900/90 border border-police-700/50 text-xs font-mono text-emerald-300 overflow-x-auto max-h-60">
+                {health ? JSON.stringify(health, null, 2) : 'Connecting...'}
+              </pre>
             </div>
           </div>
-        </div>
+        )}
       </main>
+
+      {/* New Case Modal */}
+      <NewCaseModal
+        isOpen={isNewCaseOpen}
+        onClose={() => setIsNewCaseOpen(false)}
+        onSuccess={handleCaseCreated}
+      />
 
       {/* Footer */}
       <footer className="border-t border-police-700/50 bg-police-800/40 px-6 py-3 text-center text-xs text-slate-500">

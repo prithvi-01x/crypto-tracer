@@ -31,12 +31,15 @@ class Case(Base):
     victim_reference = Column(String(100), nullable=True)
     loss_amount_inr = Column(Numeric(precision=15, scale=2), nullable=True)
     ack_number = Column(String(100), nullable=True)
+    suspect_wallet = Column(String(255), nullable=True)
+    chain = Column(String(50), nullable=False, default="TRON")
+    asset = Column(String(50), nullable=False, default="TRC20:USDT")
     status = Column(String(50), nullable=False, default="OPEN", index=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
-    traces = relationship("Trace", back_populates="case", cascade="all, delete-orphan")
+    traces = relationship("Trace", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
 
 
 class Trace(Base):
