@@ -184,3 +184,40 @@ Centralized exchanges manage liquidity through automated backend sweeping daemon
 4. **Fan-In Convergence:** The destination hot wallet simultaneously receives sweeps from hundreds of other user deposit addresses.
 
 Crypto-Tracer leverages these structural characteristics to attribute previously untagged deposit wallets to their parent exchange with high mathematical confidence.
+
+---
+
+## Attribution Heuristics & Scoring Formula
+
+The Attribution Engine calculates an explainable, deterministic confidence score between 0.00 and 1.00:
+
+$$\text{Confidence Score} = 0.35 \times \text{effective\_tag} + 0.35 \times \text{sweep} + 0.15 \times \text{fan\_in} + 0.15 \times \text{temporal}$$
+
+### 1. Effective Tag Score ($0.35$ weight)
+The effective tag differentiates direct registry knowledge from indirect downstream consolidation:
+
+$$\text{effective\_tag} = \begin{cases} \text{direct\_tag} & \text{if } \text{direct\_tag} > 0 \\ 0.80 \times \text{downstream\_vasp\_match} & \text{otherwise} \end{cases}$$
+
+- **Direct Tag ($1.0$):** Candidate address is directly verified as an exchange hot wallet in the registry.
+- **Downstream VASP Match ($0.80$):** Candidate address is unlisted, but sweeps into a verified exchange hot wallet. Downstream matching is discount-weighted at 0.80 to reflect its inferential nature.
+
+### 2. Sweep Consolidation Score ($0.35$ weight)
+Measures the proportion of received funds that are swept to a single dominant destination:
+- Sweep Ratio: $\text{Amount Swept} / \text{Amount Received}$
+- Dominant Concentration: $\text{Dominant Outgoing} / \text{Total Outgoing}$
+- If Sweep Ratio $\ge 90\%$ and Dominant Concentration $\ge 90\%$, score is $1.0$.
+
+### 3. Fan-In Convergence Score ($0.15$ weight)
+Evaluates incoming source diversity at the destination cluster. Multiple distinct senders converging into a single deposit node increases omnibus probability. Single sender: $0.30$; multi-sender ($N \ge 3$): $0.60$ to $1.00$.
+
+### 4. Temporal Decay Score ($0.15$ weight)
+Evaluates the time delta $\Delta t$ between fund arrival and the outgoing sweep using an exponential decay function:
+
+$$T(\Delta t) = e^{-\lambda \Delta t}$$
+
+Automated exchange batch sweeps occur rapidly (10–30 minutes), scoring $> 0.90$. Manual human transfers occurring hours or days later score significantly lower.
+
+### Confidence Bands
+- **HIGH Confidence:** $\ge 0.75$ (Sufficient to support Section 94 BNSS production notice)
+- **MEDIUM Confidence:** $0.50 - 0.74$ (Requires corroborating evidence or secondary hop inspection)
+- **LOW / UNVERIFIED:** $< 0.50$ (Insufficient evidence; treated as unidentified unhosted wallet)
