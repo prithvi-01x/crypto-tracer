@@ -37,12 +37,12 @@ class AttributionRepository:
                 explanation={
                     "hypothesis_label": c.hypothesis_label,
                     "confidence_percentage": c.confidence_percentage,
-                    "factors": c.factors.model_dump(),
-                    "explanations": c.explanations.model_dump(),
+                    "factors": c.factors.model_dump(mode="json"),
+                    "explanations": c.explanations.model_dump(mode="json"),
                     "evidence_bullet_points": c.evidence_bullet_points,
-                    "sweep_details": c.sweep_details.model_dump() if c.sweep_details else None,
-                    "fan_in_details": c.fan_in_details.model_dump() if c.fan_in_details else None,
-                    "temporal_details": c.temporal_details.model_dump() if c.temporal_details else None,
+                    "sweep_details": c.sweep_details.model_dump(mode="json") if c.sweep_details else None,
+                    "fan_in_details": c.fan_in_details.model_dump(mode="json") if c.fan_in_details else None,
+                    "temporal_details": c.temporal_details.model_dump(mode="json") if c.temporal_details else None,
                 },
             )
             session.add(record)

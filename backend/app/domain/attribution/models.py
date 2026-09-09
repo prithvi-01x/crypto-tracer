@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, ConfigDict, Field
@@ -85,7 +85,7 @@ class VASPCandidate(BaseModel):
 class AttributionReport(BaseModel):
     trace_id: str
     engine_version: str = "0.1.0"
-    evaluated_at: datetime = Field(default_factory=datetime.utcnow)
+    evaluated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     disclaimer: str = Field(
         "Attribution is an investigative hypothesis based on observable on-chain transaction patterns, "
         "not legal proof of account ownership.",
