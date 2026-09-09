@@ -12,6 +12,38 @@
 
 ---
 
+
+## Table of Contents
+1. [Overview](#overview)
+2. [The Problem](#the-problem)
+3. [The Solution](#the-solution)
+4. [Intended Audience & Operational Context](#intended-audience--operational-context)
+5. [End-to-End Investigation Workflow](#end-to-end-investigation-workflow)
+6. [Core Capabilities](#core-capabilities)
+7. [Blockchain Layer: TRON & TRC-20 USDT Tracing](#blockchain-layer-tron--trc-20-usdt-tracing)
+8. [Multi-Hop Graph Traversal Engine](#multi-hop-graph-traversal-engine)
+9. [Relevance Pruning & Noise Reduction](#relevance-pruning--noise-reduction)
+10. [VASP Attribution Methodology](#vasp-attribution-methodology)
+11. [Attribution Heuristics & Scoring Formula](#attribution-heuristics--scoring-formula)
+12. [Evidence Vault & Provenance DAG Architecture](#evidence-vault--provenance-dag-architecture)
+13. [Cryptographic Verification: RFC-8785 & SHA-256](#cryptographic-verification-rfc-8785--sha-256)
+14. [Legal Reporting Workflow](#legal-reporting-workflow)
+15. [Statutory Framework: BSA 2023 & BNSS 2023](#statutory-framework-bsa-2023--bnss-2023)
+16. [Legal Disclaimers & Operational Boundaries](#legal-disclaimers--operational-boundaries)
+17. [System Architecture](#system-architecture)
+18. [Technology Stack](#technology-stack)
+19. [Repository Structure](#repository-structure)
+20. [API Reference](#api-reference)
+21. [Quick Start & Local Development](#quick-start--local-development)
+22. [Docker Compose Deployment](#docker-compose-deployment)
+23. [Canonical SIH 2026 Demo Walkthrough](#canonical-sih-2026-demo-walkthrough)
+24. [Testing & Hostile Validation Results](#testing--hostile-validation-results)
+25. [Security Considerations](#security-considerations)
+26. [Forensic Boundaries & Known Limitations](#forensic-boundaries--known-limitations)
+27. [Roadmap, Contributing & License](#roadmap-contributing--license)
+
+---
+
 ## Overview
 
 Crypto-Tracer is a desktop-first forensic analysis platform built to assist cybercrime investigating officers (IOs) and law enforcement analysts in tracing defrauded crypto funds.
