@@ -461,3 +461,32 @@ crypto-tracer/
 ├── JUDGE_DEFENSE.md                     # Technical reference for SIH evaluation
 └── README.md                            # Comprehensive project documentation
 ```
+
+---
+
+## API Reference
+
+The backend exposes 20 verified RESTful endpoints under `/api/v1` and root:
+
+| Method | Endpoint | Description | Request / Response Summary |
+|---|---|---|---|
+| `GET` | `/` | Root Status | Returns application name, version, and documentation URLs. |
+| `GET` | `/api/v1/health` | Health Check | System health, PostgreSQL connectivity, and Redis ping status. |
+| `GET` | `/api/v1/auth/me` | Analyst Profile | Returns active session metadata and investigator credentials. |
+| `GET` | `/api/v1/cases` | List Cases | Returns paginated list of registered investigation cases with metrics. |
+| `POST` | `/api/v1/cases` | Register Case | Creates a new case with FIR number, victim reference, and loss amount. |
+| `GET` | `/api/v1/cases/{id}` | Case Details | Returns complete metadata for a specific investigation case. |
+| `GET` | `/api/v1/cases/{id}/traces` | List Traces | Returns all multi-hop traces executed under a specific case. |
+| `POST` | `/api/v1/traces` | Launch Trace | Executes multi-hop BFS traversal for a suspect wallet. |
+| `GET` | `/api/v1/traces/{id}` | Trace Status | Returns execution metrics, hop count, and traversal status. |
+| `GET` | `/api/v1/traces/{id}/graph` | Graph Topology | Returns nodes, directed edges, and pruning metadata for Cytoscape. |
+| `GET` | `/api/v1/traces/{id}/attribution` | VASP Attribution | Returns multi-factor attribution scores, factors, and candidate wallet. |
+| `GET` | `/api/v1/traces/{id}/evidence` | Evidence DAG | Returns complete 59-item evidence DAG with RFC-8785 hashes. |
+| `GET` | `/api/v1/cases/{id}/audit` | Case Audit Trail | Returns chronological log of investigator actions and review events. |
+| `POST` | `/api/v1/cases/{id}/audit` | Append Audit | Appends a signed investigator review or decision event to the audit trail. |
+| `POST` | `/api/v1/cases/{id}/attributions/{addr}/review` | Record Review | Records officer validation of an attribution hypothesis. |
+| `POST` | `/api/v1/cases/{id}/reports/dossier` | Generate Dossier | Compiles Section 63 BSA Evidence Dossier PDF. |
+| `POST` | `/api/v1/cases/{id}/reports/bnss94` | Draft Notice | Compiles Section 94 BNSS Legal Production Order PDF. |
+| `GET` | `/api/v1/cases/{id}/reports` | List Reports | Returns all generated legal reports and download metadata for a case. |
+| `GET` | `/api/v1/reports/{id}/download` | Download PDF | Streams the binary PDF report file with verifiable content headers. |
+| `POST` | `/api/v1/demo/seed` | Demo Replay Seed | Resets and seeds the canonical SIH 2026 evaluation scenario. |
