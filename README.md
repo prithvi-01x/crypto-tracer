@@ -165,3 +165,22 @@ Pruning does not mean data loss. Pruned transfers are retained in the database a
 - The graph canvas collapses pruned branches into a summary metric (`pruned_transfers_count`, `pruned_volume_usd`).
 - Investigators can open the Pruning Drawer at any time to inspect all filtered micro-transfers.
 - Total input volume equals total retained volume plus total pruned volume, ensuring full financial reconciliation.
+
+---
+
+## VASP Attribution Methodology
+
+### The Problem of Untagged Deposit Wallets
+Centralized Virtual Asset Service Providers (such as Binance, OKX, CoinDCX, and WazirX) assign unique, temporary deposit addresses to each registered user. When a fraudster deposits stolen funds into their exchange account:
+- The deposit address itself is **not publicly tagged** in public registries or block explorers.
+- Public explorers tag only the exchange's consolidated **hot wallets** and omnibus reserve addresses.
+- If an investigator only checks direct tags, the money trail appears to terminate at an unknown unhosted wallet.
+
+### Deposit Sweep & Consolidation Heuristics
+Centralized exchanges manage liquidity through automated backend sweeping daemons:
+1. **User Deposit:** Stolen funds arrive at the exchange-generated deposit address.
+2. **Sweeping Delay:** Within a short window (typically 10 to 45 minutes), the exchange daemon sweeps the deposit into an omnibus aggregation wallet.
+3. **Consolidation Concentration:** The sweep transfer forwards virtually 100% of the deposited balance (e.g., 99.8%) into a known exchange hot wallet.
+4. **Fan-In Convergence:** The destination hot wallet simultaneously receives sweeps from hundreds of other user deposit addresses.
+
+Crypto-Tracer leverages these structural characteristics to attribute previously untagged deposit wallets to their parent exchange with high mathematical confidence.
