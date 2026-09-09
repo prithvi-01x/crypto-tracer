@@ -614,3 +614,13 @@ An automated browser regression suite (executed via Playwright and pypdf) valida
 - Verified zero data leakage when creating a second investigation case (`FIR-2026-MUM-43DB78`).
 - Verified binary PDF content: FIR, victim, loss amount, candidate wallet, and Section 63/94 statutory text verified inside generated PDFs.
 - **SIH Live-Demo Readiness Score:** **9.8 / 10**
+
+---
+
+## Security Considerations
+
+- **Zero Private Key Exposure:** Crypto-Tracer is strictly an analytic read-only forensic tool. The application never creates, stores, or manages private cryptographic keys, and cannot sign or broadcast blockchain transactions.
+- **Input Validation & Sanitization:** All user inputs (wallet addresses, transaction hashes, FIR numbers) are validated against strict regex bounds. TRON addresses undergo Base58Check cryptographic checksum validation before any network queries are initiated.
+- **Path Traversal Protection:** Report download endpoints use cryptographically random UUIDs and strict filename sanitization, preventing directory traversal attacks.
+- **CORS Hardening:** Cross-Origin Resource Sharing (CORS) is restricted to explicit trusted development and production origins configured in environment settings.
+- **Rate-Limiting & Backoff:** All outbound RPC calls to TronGrid implement exponential backoff and jitter to adhere to public API rate limits and prevent denial-of-service throttling.
