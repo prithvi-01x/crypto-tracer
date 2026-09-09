@@ -3,11 +3,9 @@ import {
   X, 
   Layers, 
   Filter, 
-  Coins, 
   Play, 
   Loader2, 
-  AlertCircle,
-  ShieldAlert
+  AlertCircle
 } from 'lucide-react';
 import type { TraceCreateInput } from '../../types/graph';
 

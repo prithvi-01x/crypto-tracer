@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import cytoscape, { Core, EventObject } from 'cytoscape';
+import cytoscape, { type Core, type EventObject } from 'cytoscape';
 import { 
   ZoomIn, 
   ZoomOut, 
@@ -7,9 +7,8 @@ import {
   RotateCcw, 
   Crosshair, 
   Tag, 
-  Info,
-  Layers,
-  ArrowRight
+  Info, 
+  Layers
 } from 'lucide-react';
 import type { InvestigationGraph, GraphNode, GraphEdge } from '../../types/graph';
 
@@ -276,7 +275,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       layout: {
         name: 'breadthfirst',
         directed: true,
-        roots: rootSuspectAddress ? `[id = "${rootSuspectAddress}"]` : undefined,
+        roots: rootSuspectAddress ? [rootSuspectAddress] : undefined,
         padding: 50,
         spacingFactor: 1.6,
         animate: false,
@@ -363,7 +362,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
     cyRef.current.layout({
       name: 'breadthfirst',
       directed: true,
-      roots: rootAddr ? `[id = "${rootAddr}"]` : undefined,
+      roots: rootAddr ? [rootAddr] : undefined,
       padding: 50,
       spacingFactor: 1.6,
       animate: true,
