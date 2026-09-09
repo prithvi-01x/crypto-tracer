@@ -43,6 +43,7 @@ class Case(Base):
     traces = relationship("Trace", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
     evidence_items = relationship("EvidenceItemModel", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
     audit_events = relationship("AuditEventModel", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
+    reports = relationship("ReportModel", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
 
 
 class Trace(Base):
@@ -70,6 +71,7 @@ class Trace(Base):
     case = relationship("Case", back_populates="traces")
     attributions = relationship("AttributionResult", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
     evidence_items = relationship("EvidenceItemModel", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
+    reports = relationship("ReportModel", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
 
 
 class AttributionResult(Base):
@@ -133,4 +135,23 @@ class AuditEventModel(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     case = relationship("Case", back_populates="audit_events")
+
+
+class ReportModel(Base):
+    __tablename__ = "reports"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    case_id = Column(String(36), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
+    trace_id = Column(String(36), ForeignKey("traces.id", ondelete="SET NULL"), nullable=True, index=True)
+    report_type = Column(String(50), nullable=False, index=True)  # EVIDENCE_DOSSIER, SECTION_94_BNSS
+    title = Column(String(255), nullable=False)
+    file_path = Column(String(512), nullable=False)
+    file_size_bytes = Column(Integer, nullable=False, default=0)
+    content_hash = Column(String(64), nullable=False, index=True)  # SHA-256
+    generated_by = Column(String(100), nullable=False, default="investigator")
+    metadata_json = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    case = relationship("Case", back_populates="reports")
+    trace = relationship("Trace", back_populates="reports")
 
