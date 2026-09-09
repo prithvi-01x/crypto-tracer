@@ -23,3 +23,15 @@ Crypto-Tracer automates multi-hop TRC-20 token tracing, applies dynamic dust-rel
 The platform enforces a foundational architectural principle:
 - **Transaction tracing is deterministic:** On-chain fund movements, token transfers, block timestamps, and ledger balances are immutable mathematical facts extracted directly from blockchain consensus nodes.
 - **VASP attribution is inferential:** Linking an unhosted wallet address to a custodial exchange is an investigative hypothesis derived from clustering heuristics and behavioral patterns. Every attribution requires human investigator validation before statutory action is taken.
+
+---
+
+## The Problem
+
+In modern cyber-financial fraud across India (including task-based investment scams, part-time job fraud, digital arrest extortion, and illegal betting), fraud syndicates launder illicit proceeds predominantly through Tether USD (USDT) on the TRON (TRC-20) network.
+
+Investigating Officers face three severe operational bottlenecks:
+
+1. **Investigation Latency:** Manual tracing across public block explorers takes hours or days. By the time an investigator manually identifies an exchange deposit address, the fraudsters have already liquidated the assets into fiat via P2P markets or withdrawn them.
+2. **Micro-Dust Transaction Noise:** Syndicates intentionally inject dozens of low-value transfers ($0.10 to $0.80) to confuse automated scrapers, create exponential branching in visual graph tools, and exhaust investigator bandwidth.
+3. **Evidentiary Inadmissibility:** Screenshots of block explorer web pages lack cryptographic hash integrity, tamper verification, and compliance with statutory standards required in Indian criminal courts.
