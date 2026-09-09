@@ -65,3 +65,26 @@ class Trace(Base):
     duration_ms = Column(Integer, nullable=True)
 
     case = relationship("Case", back_populates="traces")
+    attributions = relationship("AttributionResult", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
+
+
+class AttributionResult(Base):
+    __tablename__ = "attribution_results"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    trace_id = Column(String(36), ForeignKey("traces.id", ondelete="CASCADE"), nullable=False, index=True)
+    vasp_id = Column(String(100), nullable=False)
+    vasp_name = Column(String(100), nullable=False)
+    candidate_address = Column(String(255), nullable=False)
+    confidence = Column(Numeric(precision=5, scale=4), nullable=False)
+    confidence_band = Column(String(20), nullable=False)
+    direct_tag_score = Column(Numeric(precision=5, scale=4), nullable=False)
+    sweep_score = Column(Numeric(precision=5, scale=4), nullable=False)
+    fan_in_score = Column(Numeric(precision=5, scale=4), nullable=False)
+    temporal_score = Column(Numeric(precision=5, scale=4), nullable=False)
+    verification_status = Column(String(50), nullable=False, default="VERIFIED")
+    explanation = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    trace = relationship("Trace", back_populates="attributions")
+
