@@ -168,6 +168,7 @@ async def list_traces_for_case(
                 input_value=t.input_value,
                 asset=t.asset,
                 max_hops=t.max_hops,
+                execution_mode=getattr(t, "execution_mode", "DEMO"),
                 duration_ms=t.duration_ms,
                 node_count=t.node_count,
                 edge_count=t.edge_count,
@@ -177,6 +178,9 @@ async def list_traces_for_case(
                 pruned_nodes=pruned_count,
                 raw_transfers_count=meta.get("raw_transfers_fetched_count", 0),
                 relevant_transfers_count=meta.get("traversal_relevant_transfers_count", 0),
+                boundary_code=getattr(t, "boundary_code", None) or meta.get("boundary_reached"),
+                investigator_summary=getattr(t, "investigator_summary", None) or meta.get("investigator_explanation"),
+                is_partial=(t.status == "PARTIAL") or meta.get("is_partial", False),
                 started_at=t.started_at,
                 completed_at=t.completed_at,
             )

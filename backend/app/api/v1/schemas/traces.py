@@ -13,6 +13,7 @@ class TraceCreateRequest(BaseModel):
     asset: str = Field("TRC20:USDT", description="Target asset identifier", json_schema_extra={"example": "TRC20:USDT"})
     max_hops: int = Field(4, ge=1, le=10, description="Maximum graph traversal depth", json_schema_extra={"example": 4})
     min_relevant_usd: Decimal = Field(Decimal("1.00"), ge=0, description="Minimum relevant transfer value", json_schema_extra={"example": 1.00})
+    execution_mode: str = Field("DEMO", description="Execution mode: 'DEMO' (deterministic fixture replay) or 'LIVE' (real-time blockchain query)")
 
 
 class TraceStatusResponse(BaseModel):
@@ -23,6 +24,7 @@ class TraceStatusResponse(BaseModel):
     input_value: str
     asset: str
     max_hops: int
+    execution_mode: str = "DEMO"
     duration_ms: Optional[int] = None
     node_count: int = 0
     edge_count: int = 0

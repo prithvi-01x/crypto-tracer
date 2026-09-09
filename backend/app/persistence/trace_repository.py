@@ -18,6 +18,7 @@ class TraceRepository:
         asset: str = "TRC20:USDT",
         max_hops: int = 4,
         min_relevant_usd: Decimal = Decimal("1.00"),
+        execution_mode: str = "DEMO",
     ) -> Trace:
         trace = Trace(
             case_id=case_id,
@@ -28,6 +29,7 @@ class TraceRepository:
             status="RUNNING",
             max_hops=max_hops,
             min_relevant_usd=min_relevant_usd,
+            execution_mode=execution_mode.upper(),
             started_at=datetime.now(timezone.utc),
             engine_version="0.1.0",
         )

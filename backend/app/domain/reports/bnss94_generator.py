@@ -223,6 +223,17 @@ class BNSS94DraftGenerator:
                 Paragraph("<b>Mandatory Turnaround:</b>", body_style),
                 Paragraph(f"<b>Within {urgency_hours} Hours of Receipt</b>", body_style),
             ],
+            [
+                Paragraph("<b>Requisition Context:</b>", body_style),
+                Paragraph(
+                    "<font color='#D97706'><b>DEMO / REPLAY (EVALUATION ONLY)</b></font>"
+                    if getattr(trace, "execution_mode", "DEMO") == "DEMO"
+                    else "<font color='#059669'><b>LIVE POLICE INVESTIGATION</b></font>",
+                    body_style
+                ),
+                Paragraph("<b>Legal Draft Notice:</b>", body_style),
+                Paragraph("DRAFT — FOR OFFICER REVIEW ONLY", body_style),
+            ],
         ]
 
         p_table = Table(particulars_data, colWidths=[130, 145, 115, 142])

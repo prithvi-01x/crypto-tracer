@@ -69,6 +69,7 @@ class Trace(Base):
     duration_ms = Column(Integer, nullable=True)
     boundary_code = Column(String(50), nullable=True)
     investigator_summary = Column(Text, nullable=True)
+    execution_mode = Column(String(20), nullable=False, default="DEMO")
 
     case = relationship("Case", back_populates="traces")
     attributions = relationship("AttributionResult", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")

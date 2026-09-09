@@ -6,6 +6,7 @@ from backend.app.api.v1.endpoints.blockchain import router as blockchain_router
 from backend.app.api.v1.endpoints.traces import router as traces_router
 from backend.app.api.v1.endpoints.evidence import router as evidence_router
 from backend.app.api.v1.endpoints.reports import router as reports_router
+from backend.app.api.v1.endpoints.demo import router as demo_router
 
 api_v1_router = APIRouter()
 
@@ -27,3 +28,6 @@ api_v1_router.include_router(evidence_router)
 
 # Phase 8 endpoints
 api_v1_router.include_router(reports_router)
+
+# Phase 10 Demo Replay & Reset endpoints
+api_v1_router.include_router(demo_router)

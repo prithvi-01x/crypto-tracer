@@ -229,6 +229,22 @@ class EvidenceDossierGenerator:
                 Paragraph("<b>Suspect Unhosted Wallet:</b>", body_style),
                 Paragraph(f"<font name='Courier' color='#DC2626'>{case.suspect_wallet or 'N/A'}</font>", body_style),
             ],
+            [
+                Paragraph("<b>Execution Mode:</b>", body_style),
+                Paragraph(
+                    "<font color='#D97706'><b>DEMONSTRATION / REPLAY</b></font>"
+                    if getattr(trace, "execution_mode", "DEMO") == "DEMO"
+                    else "<font color='#059669'><b>LIVE ON-CHAIN TRACE</b></font>",
+                    body_style
+                ),
+                Paragraph("<b>Data Provenance:</b>", body_style),
+                Paragraph(
+                    "Deterministic SIH Test Fixture"
+                    if getattr(trace, "execution_mode", "DEMO") == "DEMO"
+                    else "TronGrid API / Blockchain Ledger",
+                    body_style
+                ),
+            ],
         ]
 
         meta_table = Table(meta_table_data, colWidths=[110, 155, 115, 152])

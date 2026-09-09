@@ -19,6 +19,7 @@ from backend.app.adapters.base import (
     ProviderRateLimitError,
 )
 from backend.app.adapters.tron_provider import TronProvider, validate_tron_address
+from backend.app.domain.demo.canonical_data import DemoFixtureProvider, is_canonical_demo_address
 from backend.app.domain.tracing.engine import GraphEngine
 from backend.app.domain.models import InvestigationGraph
 from backend.app.domain.attribution.engine import AttributionEngine
@@ -79,7 +80,14 @@ async def start_trace(
                 }
             )
 
-    # 3. Create initial trace record in PostgreSQL
+    # 3. Determine execution mode (DEMO vs LIVE)
+    requested_mode = getattr(trace_in, "execution_mode", "DEMO").upper()
+    if is_canonical_demo_address(clean_input):
+        resolved_mode = "DEMO"
+    else:
+        resolved_mode = "DEMO" if requested_mode == "DEMO" else "LIVE"
+
+    # Create initial trace record in PostgreSQL
     trace_record = await TraceRepository.create(
         session=db,
         case_id=trace_in.case_id,
@@ -89,10 +97,15 @@ async def start_trace(
         asset=trace_in.asset,
         max_hops=trace_in.max_hops,
         min_relevant_usd=trace_in.min_relevant_usd,
+        execution_mode=resolved_mode,
     )
 
     # 4. Initialize Blockchain Provider & Graph Engine
-    provider = TronProvider(redis_client=redis)
+    if resolved_mode == "DEMO":
+        provider = DemoFixtureProvider()
+    else:
+        provider = TronProvider(redis_client=redis)
+
     engine = GraphEngine(
         provider=provider,
         max_hops=trace_in.max_hops,
@@ -102,6 +115,7 @@ async def start_trace(
     # 5. Execute Graph Traversal
     try:
         graph = await engine.trace(source_address=clean_input)
+        graph.meta["execution_mode"] = resolved_mode
         duration_ms = int(graph.meta.get("duration_ms", 0))
         is_partial = graph.meta.get("is_partial", False)
         boundary_code = graph.meta.get("boundary_reached")
