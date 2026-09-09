@@ -41,6 +41,8 @@ class Case(Base):
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
     traces = relationship("Trace", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
+    evidence_items = relationship("EvidenceItemModel", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
+    audit_events = relationship("AuditEventModel", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
 
 
 class Trace(Base):
@@ -67,6 +69,7 @@ class Trace(Base):
 
     case = relationship("Case", back_populates="traces")
     attributions = relationship("AttributionResult", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
+    evidence_items = relationship("EvidenceItemModel", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
 
 
 class AttributionResult(Base):
@@ -89,4 +92,45 @@ class AttributionResult(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     trace = relationship("Trace", back_populates="attributions")
+
+
+class EvidenceItemModel(Base):
+    __tablename__ = "evidence_items"
+
+    id = Column(String(64), primary_key=True)
+    case_id = Column(String(36), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
+    trace_id = Column(String(36), ForeignKey("traces.id", ondelete="CASCADE"), nullable=True, index=True)
+    evidence_type = Column(String(50), nullable=False)
+    classification = Column(String(20), nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    source = Column(String(100), nullable=False)
+    source_reference = Column(String(255), nullable=True)
+    payload = Column(JSON, nullable=False)
+    parent_evidence_ids = Column(JSON, nullable=True)
+    content_hash = Column(String(64), nullable=False, index=True)
+    engine_version = Column(String(20), nullable=False, default="0.1.0")
+    configuration_snapshot = Column(JSON, nullable=True)
+    collected_at = Column(DateTime(timezone=True), nullable=False)
+    analysis_timestamp = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    case = relationship("Case", back_populates="evidence_items")
+    trace = relationship("Trace", back_populates="evidence_items")
+
+
+class AuditEventModel(Base):
+    __tablename__ = "audit_events"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    case_id = Column(String(36), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
+    trace_id = Column(String(36), ForeignKey("traces.id", ondelete="SET NULL"), nullable=True, index=True)
+    actor_id = Column(String(100), nullable=False, default="investigator")
+    event_type = Column(String(50), nullable=False, index=True)
+    action_summary = Column(Text, nullable=False)
+    metadata_json = Column(JSON, nullable=True)
+    content_hash = Column(String(64), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    case = relationship("Case", back_populates="audit_events")
 
