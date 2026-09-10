@@ -524,20 +524,51 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                       TRC-20 USDT Flow &bull; Multi-Hop Directed
                     </span>
                     {graph && (
-                      <span className={`text-[11px] px-2 py-0.5 rounded font-mono font-bold border flex items-center gap-1.5 ${
-                        (graph.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
-                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-                          : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30'
-                      }`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-[11px] px-2 py-0.5 rounded font-mono font-bold border flex items-center gap-1.5 ${
                           (graph.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
-                            ? 'bg-emerald-500 animate-pulse'
-                            : 'bg-amber-500'
-                        }`} />
-                        {(graph.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
-                          ? 'LIVE TRON RPC'
-                          : 'DEMO REPLAY'}
-                      </span>
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                            : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30'
+                        }`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${
+                            (graph.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
+                              ? 'bg-emerald-500 animate-pulse'
+                              : 'bg-amber-500'
+                          }`} />
+                          {(graph.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
+                            ? 'LIVE TRON RPC'
+                            : 'DEMO REPLAY'}
+                        </span>
+
+                        {traces.find(t => t.trace_id === selectedTraceId)?.status === 'PARTIAL' && (
+                          <span 
+                            className="text-[11px] px-2 py-0.5 rounded font-mono font-bold border bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 flex items-center gap-1"
+                            title="Trace reached maximum hop depth or pruning threshold before terminal exchange sweep."
+                          >
+                            <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                            PARTIAL
+                          </span>
+                        )}
+
+                        {traces.find(t => t.trace_id === selectedTraceId)?.status === 'FAILED' && (
+                          <div className="flex items-center gap-1">
+                            <span 
+                              className="text-[11px] px-2 py-0.5 rounded font-mono font-bold border bg-red-500/15 text-red-800 dark:text-red-300 border-red-500/40 flex items-center gap-1"
+                              title="Previous trace execution failed. Click retry to re-execute."
+                            >
+                              <AlertTriangle className="h-3 w-3 text-red-600 dark:text-red-400" />
+                              FAILED
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleExecuteTrace()}
+                              className="text-[10px] px-2 py-0.5 rounded font-bold bg-red-600 hover:bg-red-700 text-white transition cursor-pointer"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -729,12 +760,22 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
 
                       {/* Error Alert if any */}
                       {traceError && (
-                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 flex items-start gap-2.5 text-xs text-red-700 dark:text-red-300">
-                          <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <span className="font-semibold block">Execution Failed</span>
-                            <span className="mt-0.5 block">{traceError}</span>
+                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 flex items-start justify-between gap-2.5 text-xs text-red-700 dark:text-red-300">
+                          <div className="flex items-start gap-2.5">
+                            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <span className="font-semibold block">Execution Failed</span>
+                              <span className="mt-0.5 block">{traceError}</span>
+                            </div>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => handleExecuteTrace()}
+                            disabled={isTracing}
+                            className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs shrink-0 cursor-pointer transition shadow-2xs"
+                          >
+                            Retry
+                          </button>
                         </div>
                       )}
 
@@ -942,8 +983,11 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                     onHighlightPathToRoot={handleViewOnGraph}
                     onNavigateToReports={() => setActiveTab('reports')}
                     onNavigateToEvidence={() => setActiveTab('evidence')}
+                    onNavigateToFinding={() => setActiveTab('findings')}
+                    onSelectNodeByAddress={handleViewOnGraph}
                     attribution={attribution}
                     findings={findings}
+                    graph={graph}
                   />
                 )}
               </div>
@@ -972,6 +1016,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                attribution={attribution}
                loading={false}
                onNavigateToEvidence={() => setActiveTab('evidence')}
+               onNavigateToGraph={handleViewOnGraph}
                onOpenReportModal={() => setIsExportModalOpen(true)}
                executionMode={graph?.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO'}
                caseData={caseData}
@@ -1001,13 +1046,19 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
               traceId={selectedTraceId}
               firNumber={caseData.fir_number}
               initialSelectedEvidenceId={selectedEvidenceId}
+              onNavigateToGraph={handleViewOnGraph}
             />
           </div>
         )}
 
         {activeTab === 'reports' && (
           <div className="flex-1">
-             <ReportsView caseData={caseData} traceId={selectedTraceId} />
+             <ReportsView 
+               caseData={caseData} 
+               traceId={selectedTraceId} 
+               onNavigateToGraph={() => setActiveTab('graph')}
+               onNavigateToEvidence={() => setActiveTab('evidence')}
+             />
           </div>
         )}
       </div>
