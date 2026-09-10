@@ -96,6 +96,7 @@ class GraphEngine:
         bounds_hit = False
         is_partial = False
         max_hops_encountered = False
+        traversal_errors: List[Dict[str, Any]] = []
 
         # Boundary tracking details
         boundary_code: Optional[BoundaryCode] = None
@@ -178,6 +179,8 @@ class GraphEngine:
                 logger.warning(f"Error fetching transfers for address {current_addr}: {e}")
                 if current_hop == 0:
                     raise
+                traversal_errors.append({"address": current_addr, "hop": current_hop, "error": str(e)})
+                is_partial = True
                 continue
 
             raw_transfers = page.transfers
@@ -422,6 +425,7 @@ class GraphEngine:
             "duration_ms": elapsed_ms,
             "bounds_hit": bounds_hit,
             "is_partial": is_partial,
+            "traversal_errors": traversal_errors,
             "boundary_reached": boundary_code.value if boundary_code else None,
             "investigator_explanation": boundary_info.investigator_explanation if boundary_info else None,
         }
