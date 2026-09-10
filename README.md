@@ -35,12 +35,11 @@
 19. [Repository Structure](#repository-structure)
 20. [API Reference](#api-reference)
 21. [Quick Start & Local Development](#quick-start--local-development)
-22. [Docker Compose Deployment](#docker-compose-deployment)
-23. [Canonical SIH 2026 Demo Walkthrough](#canonical-sih-2026-demo-walkthrough)
-24. [Testing & Hostile Validation Results](#testing--hostile-validation-results)
-25. [Security Considerations](#security-considerations)
-26. [Forensic Boundaries & Known Limitations](#forensic-boundaries--known-limitations)
-27. [Roadmap, Contributing & License](#roadmap-contributing--license)
+22. [Canonical SIH 2026 Demo Walkthrough](#canonical-sih-2026-demo-walkthrough)
+23. [Testing & Hostile Validation Results](#testing--hostile-validation-results)
+24. [Security Considerations](#security-considerations)
+25. [Forensic Boundaries & Known Limitations](#forensic-boundaries--known-limitations)
+26. [Roadmap, Contributing & License](#roadmap-contributing--license)
 
 ---
 
@@ -472,9 +471,8 @@ crypto-tracer/
 │   │   ├── persistence/                 # SQLAlchemy 2.0 models and PostgreSQL engine
 │   │   ├── services/                    # ReportLab PDF compilation and demo seeding
 │   │   └── config.py                    # Environment and application settings
-│   ├── tests/                           # 83 automated pytest test suites
-│   ├── requirements.txt                 # Python dependencies
-│   └── Dockerfile                       # Backend container definition
+│   ├── tests/                           # 94 automated pytest test suites
+│   └── requirements.txt                 # Python dependencies
 ├── frontend/
 │   ├── src/
 │   │   ├── api/                         # Typed API client modules
@@ -487,9 +485,7 @@ crypto-tracer/
 │   │   ├── App.tsx                      # Root workspace navigation and theme management
 │   │   └── main.tsx                     # React application entry point
 │   ├── package.json                     # Frontend dependencies
-│   ├── vite.config.ts                   # Vite build configuration
-│   └── Dockerfile                       # Production Nginx container definition
-├── docker-compose.yml                   # Multi-container service definitions
+│   └── vite.config.ts                   # Vite build configuration
 ├── JUDGE_DEFENSE.md                     # Technical reference for SIH evaluation
 └── README.md                            # Comprehensive project documentation
 ```
@@ -528,74 +524,72 @@ The backend exposes 20 verified RESTful endpoints under `/api/v1` and root:
 ## Quick Start & Local Development
 
 ### Prerequisites
-- **Python:** 3.12 or higher
 - **Node.js:** 20 LTS or higher
-- **Docker & Docker Compose:** Docker Engine 24+ with Compose v2
-- **PostgreSQL & Redis:** (Required if running outside Docker)
+- **npm:** 10 or higher
+- **Python:** 3.12 or higher
+- **PostgreSQL:** 15 or higher (running locally on port `5432`)
+- **Redis:** 7 or higher (running locally on port `6379`)
 
-### 1. Repository Setup
+### 1. Install Backend Dependencies
 ```bash
-git clone https://github.com/your-org/crypto-tracer.git
-cd crypto-tracer
-```
-
-### 2. Backend Setup (Local)
-```bash
-# Create virtual environment
+# Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
 
-# Install dependencies
+# Install Python dependencies
 pip install -r backend/requirements.txt
-
-# Run database migrations / initialize tables
-uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 3. Frontend Setup (Local)
+### 2. Configure Environment
+```bash
+# Copy example configuration template
+cp .env.example .env
+```
+Ensure `.env` matches your local database and Redis configuration:
+- `DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/crypto_tracer`
+- `REDIS_URL=redis://localhost:6379/0`
+
+### 3. Create Database
+```bash
+# Ensure local PostgreSQL service is running, then create database:
+createdb -U postgres -h localhost -p 5432 crypto_tracer
+```
+
+### 4. Run Migrations & Schema Initialization
+The application initializes required database schemas automatically via SQLAlchemy (`Base.metadata.create_all`) upon FastAPI startup.
+
+### 5. Start Redis
+```bash
+# Start local Redis server (if not already running as a system service)
+redis-server
+
+# Verify Redis connectivity (Expected: PONG)
+redis-cli ping
+```
+
+### 6. Start Backend
+```bash
+source venv/bin/activate
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+- API & Swagger documentation: `http://localhost:8000/api/v1/docs`
+- Health check: `http://localhost:8000/api/v1/health`
+
+### 7. Start Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+- Frontend Workstation: `http://localhost:5173`
 
-The application will be accessible at:
-- **Frontend Workstation:** `http://localhost:5173`
-- **Backend API & Swagger Docs:** `http://localhost:8000/api/v1/docs`
-
----
-
-## Docker Compose Deployment
-
-The complete multi-service stack can be deployed with a single command:
-
-```bash
-# Build and start all services in the background
-docker compose up --build -d
-```
-
-### Verified Service Endpoints
-| Service | Host Port | Internal Port | Healthcheck Endpoint |
+### Verified Local Service Endpoints
+| Service | Local Address | Port | Healthcheck / Verification |
 |---|---|---|---|
-| **Frontend Workstation** | `5173` | `80` | `http://localhost:5173` |
-| **Backend API** | `8000` | `8000` | `http://localhost:8000/api/v1/health` |
-| **PostgreSQL 16** | `5432` | `5432` | `pg_isready -U postgres -d crypto_tracer` |
-| **Redis 7** | `6380` | `6379` | `redis-cli ping` |
-
-### Management Commands
-```bash
-# Check service status
-docker compose ps
-
-# View backend logs in real-time
-docker compose logs -f backend
-
-# Stop all containers
-docker compose down
-
-# Clean teardown including database volumes
-docker compose down -v
-```
+| **Frontend Workstation** | `http://localhost:5173` | `5173` | `curl http://localhost:5173` |
+| **Backend API** | `http://localhost:8000` | `8000` | `curl http://localhost:8000/api/v1/health` |
+| **PostgreSQL Database** | `localhost:5432` | `5432` | `psql -U postgres -h localhost -d crypto_tracer -c "SELECT 1;"` |
+| **Redis Cache** | `localhost:6379` | `6379` | `redis-cli ping` (returns `PONG`) |
 
 ---
 

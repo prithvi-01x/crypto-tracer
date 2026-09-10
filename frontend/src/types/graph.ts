@@ -57,6 +57,7 @@ export interface GraphMeta {
   max_branches_per_node: number;
   duration_ms: number;
   bounds_hit: boolean;
+  execution_mode?: 'DEMO' | 'LIVE' | string;
 }
 
 export interface InvestigationGraph {
@@ -74,16 +75,18 @@ export interface TraceCreateInput {
   asset?: string;
   max_hops?: number;
   min_relevant_usd?: number;
+  execution_mode?: 'DEMO' | 'LIVE' | string;
 }
 
 export interface TraceStatus {
   trace_id: string;
   case_id: string;
-  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | string;
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED' | string;
   chain: string;
   input_value: string;
   asset: string;
   max_hops: number;
+  execution_mode?: 'DEMO' | 'LIVE' | string;
   duration_ms?: number | null;
   node_count: number;
   edge_count: number;

@@ -11,15 +11,6 @@ export async function getCaseFindings(caseId: string): Promise<FindingListRespon
   return res.json();
 }
 
-export async function getTraceFindings(traceId: string): Promise<FindingListResponse> {
-  const res = await fetch(`${API_BASE}/traces/${traceId}/findings`);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to fetch trace findings: ${res.statusText}`);
-  }
-  return res.json();
-}
-
 export async function reviewFinding(
   caseId: string,
   findingId: string,

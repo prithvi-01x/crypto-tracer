@@ -7,14 +7,21 @@ import {
   Layers,
   FileText,
   User,
-  Coins
+  Coins,
+  Play,
+  RefreshCw,
+  Zap,
+  Activity,
+  AlertTriangle,
+  Sparkles,
+  X
 } from 'lucide-react';
 import type { CaseItem } from '../../types/case';
 import type { InvestigationGraph, TraceStatus, GraphNode, GraphEdge } from '../../types/graph';
 import type { AttributionResponse } from '../../types/attribution';
 import type { ForensicFindingItem } from '../../types/findings';
 import { getCaseById } from '../../api/cases';
-import { getTracesByCase, getTraceGraph, getTraceAttribution } from '../../api/traces';
+import { getTracesByCase, getTraceGraph, getTraceAttribution, startTrace } from '../../api/traces';
 import { getCaseFindings } from '../../api/findings';
 import { InvestigationGraphCanvas } from '../graph/InvestigationGraphCanvas';
 import { GraphDetailDrawer } from '../graph/GraphDetailDrawer';
@@ -34,7 +41,7 @@ interface CaseDetailsViewProps {
 
 export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack }) => {
   const [caseData, setCaseData] = useState<CaseItem | null>(null);
-  const [_traces, setTraces] = useState<TraceStatus[]>([]);
+  const [traces, setTraces] = useState<TraceStatus[]>([]);
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const [graph, setGraph] = useState<InvestigationGraph | null>(null);
   const [attribution, setAttribution] = useState<AttributionResponse | null>(null);
@@ -47,6 +54,17 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   const [isNotesModalOpen, setIsNotesModalOpen] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isPruningOpen, setIsPruningOpen] = useState<boolean>(false);
+  const [isRetraceModalOpen, setIsRetraceModalOpen] = useState<boolean>(false);
+
+  // Trace Execution & Execution Mode States (P0 & P1)
+  const [isTracing, setIsTracing] = useState<boolean>(false);
+  const [traceStatusStage, setTraceStatusStage] = useState<'IDLE' | 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED'>('IDLE');
+  const [traceStageText, setTraceStageText] = useState<string>('');
+  const [traceError, setTraceError] = useState<string | null>(null);
+  const [traceWalletInput, setTraceWalletInput] = useState<string>('');
+  const [traceExecutionMode, setTraceExecutionMode] = useState<'DEMO' | 'LIVE'>('DEMO');
+  const [traceHops, setTraceHops] = useState<number>(4);
+  const [traceMinUsd, setTraceMinUsd] = useState<number>(1.0);
 
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
@@ -64,8 +82,15 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
         ]);
         setCaseData(caseRes);
         setTraces(tracesRes);
+        if (caseRes.suspect_wallet) {
+          setTraceWalletInput(caseRes.suspect_wallet);
+        }
         if (tracesRes.length > 0) {
           setSelectedTraceId(tracesRes[0].trace_id);
+        } else {
+          setSelectedTraceId(null);
+          setGraph(null);
+          setAttribution(null);
         }
       } catch (err: any) {
         console.error(err);
@@ -75,6 +100,73 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
     }
     load();
   }, [caseId]);
+
+  const handleExecuteTrace = async (overrideWallet?: string, overrideMode?: 'DEMO' | 'LIVE', overrideHops?: number) => {
+    if (!caseData) return;
+    const targetWallet = (overrideWallet || traceWalletInput || caseData.suspect_wallet || '').trim();
+    if (!targetWallet) {
+      setTraceError('Target suspect wallet address is required to execute trace.');
+      return;
+    }
+    const mode = overrideMode || traceExecutionMode;
+    const hops = overrideHops ?? traceHops;
+
+    setIsTracing(true);
+    setTraceError(null);
+    setTraceStatusStage('QUEUED');
+    setTraceStageText('Allocating forensic worker and initializing graph traversal pipeline...');
+
+    const stepTimer = setTimeout(() => {
+      setTraceStatusStage('RUNNING');
+      setTraceStageText(
+        mode === 'LIVE'
+          ? 'Querying on-chain TRON node via JSON-RPC / Trongrid for TRC-20 USDT transfer logs...'
+          : 'Parsing deterministic replay fixture for suspect wallet...'
+      );
+    }, 350);
+
+    try {
+      const result = await startTrace({
+        case_id: caseData.id,
+        chain: caseData.chain || 'TRON',
+        input: targetWallet,
+        asset: caseData.asset || 'TRC20:USDT',
+        max_hops: hops,
+        min_relevant_usd: traceMinUsd,
+        execution_mode: mode,
+      });
+
+      clearTimeout(stepTimer);
+      setTraceStatusStage((result.status as any) || 'COMPLETED');
+      setTraceStageText('Compiling evidence DAG, evaluating VASP attribution & generating Section 63 hash roots...');
+
+      // Reload traces for this case
+      const updatedTraces = await getTracesByCase(caseData.id);
+      setTraces(updatedTraces);
+      setSelectedTraceId(result.trace_id);
+
+      // Fetch newly generated graph & attribution
+      const [graphRes, attrRes] = await Promise.allSettled([
+        getTraceGraph(result.trace_id),
+        getTraceAttribution(result.trace_id),
+      ]);
+      if (graphRes.status === 'fulfilled') setGraph(graphRes.value);
+      if (attrRes.status === 'fulfilled') setAttribution(attrRes.value);
+      await loadFindings();
+
+      if (!caseData.suspect_wallet) {
+        setCaseData(prev => prev ? { ...prev, suspect_wallet: targetWallet } : prev);
+      }
+      setIsRetraceModalOpen(false);
+    } catch (err: any) {
+      clearTimeout(stepTimer);
+      console.error('Trace execution failed:', err);
+      setTraceStatusStage('FAILED');
+      setTraceError(err.message || 'Trace execution failed. Please verify TRON wallet address.');
+    } finally {
+      setIsTracing(false);
+    }
+  };
 
   const loadFindings = useCallback(async () => {
     setFindingsLoading(true);
@@ -212,6 +304,24 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
             <span className="font-mono text-[11px] bg-surface-100 text-surface-600 px-2 py-0.5 rounded border border-surface-200 whitespace-nowrap shrink-0">
               {caseData.chain || 'TRON'} ({caseData.asset || 'TRC-20'})
             </span>
+
+            <div className="w-px h-3.5 bg-surface-200 shrink-0" />
+
+            {/* Execution Mode Pill */}
+            <span className={`font-mono text-[11px] px-2 py-0.5 rounded border whitespace-nowrap shrink-0 font-bold flex items-center gap-1.5 ${
+              (graph?.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30'
+            }`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${
+                (graph?.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
+                  ? 'bg-emerald-500 animate-pulse'
+                  : 'bg-amber-500'
+              }`} />
+              {(graph?.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
+                ? 'LIVE TRON RPC'
+                : 'DEMO REPLAY FIXTURE'}
+            </span>
           </div>
 
           {/* Right Action Buttons */}
@@ -312,15 +422,41 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
               {/* Graph Canvas Container */}
               <div className="w-full lg:w-[68%] h-[55%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col overflow-hidden shadow-xs">
                 <div className="px-3.5 py-2.5 border-b border-surface-200 flex justify-between items-center bg-surface-50">
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 flex-wrap">
                     <h3 className="font-semibold text-sm text-surface-800 dark:text-surface-100">
                       Forensic Transaction Graph
                     </h3>
                     <span className="text-[11px] bg-surface-200 text-surface-700 px-2 py-0.5 rounded font-mono">
                       TRC-20 USDT Flow &bull; Multi-Hop Directed
                     </span>
+                    {graph && (
+                      <span className={`text-[11px] px-2 py-0.5 rounded font-mono font-bold border flex items-center gap-1.5 ${
+                        (graph.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
+                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                          : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30'
+                      }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${
+                          (graph.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
+                            ? 'bg-emerald-500 animate-pulse'
+                            : 'bg-amber-500'
+                        }`} />
+                        {(graph.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO') === 'LIVE'
+                          ? 'LIVE TRON RPC'
+                          : 'DEMO REPLAY'}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {graph && (
+                      <button
+                        onClick={() => setIsRetraceModalOpen(true)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold border border-surface-200 bg-surface-default hover:bg-surface-100 text-surface-700 dark:text-surface-200 transition cursor-pointer"
+                        title="Re-run trace with different parameters"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5 text-reactor-orange" />
+                        <span>Re-Trace</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => setShowFindingsDrawer(!showFindingsDrawer)}
                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold border transition cursor-pointer ${
@@ -340,7 +476,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                   </div>
                 </div>
 
-                <div className="flex-1 relative bg-surface-50 overflow-hidden">
+                <div className="flex-1 relative bg-surface-50 overflow-y-auto p-4 flex items-center justify-center min-h-[460px]">
                   {graph ? (
                     <InvestigationGraphCanvas 
                       graph={graph} 
@@ -349,9 +485,221 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                       onSelectNode={setSelectedNode} 
                       onSelectEdge={setSelectedEdge}
                     />
+                  ) : isTracing ? (
+                    /* Active Execution Progress Screen */
+                    <div className="w-full max-w-lg bg-surface-default border border-surface-200 rounded-xl p-6 shadow-md text-center space-y-5">
+                      <div className="flex justify-center">
+                        <div className="h-14 w-14 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center">
+                          <Activity className="h-7 w-7 text-reactor-orange animate-spin" />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-center gap-2 mb-1.5">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold tracking-wide border ${
+                            traceStatusStage === 'QUEUED' 
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' 
+                              : 'bg-brand-blue/15 text-brand-blue dark:text-blue-300 border-brand-blue/30'
+                          }`}>
+                            STATUS: {traceStatusStage}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-surface-100 text-surface-600 border border-surface-200">
+                            MODE: {traceExecutionMode === 'LIVE' ? 'LIVE TRON RPC' : 'DEMO FIXTURE'}
+                          </span>
+                        </div>
+                        <h3 className="text-base font-bold text-surface-900 dark:text-white">
+                          Executing Multi-Hop Graph Traversal
+                        </h3>
+                        <p className="text-xs text-surface-500 mt-1 font-mono break-all px-4">
+                          Target: {traceWalletInput || caseData.suspect_wallet || 'Initializing...'}
+                        </p>
+                      </div>
+
+                      {/* Animated Progress Bar */}
+                      <div className="w-full bg-surface-200 dark:bg-surface-300 h-2 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-reactor-orange to-brand-blue animate-pulse rounded-full w-3/4 transition-all duration-700" />
+                      </div>
+
+                      <div className="p-3 bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300 rounded-lg text-xs text-surface-600 dark:text-surface-300 text-left font-mono space-y-1">
+                        <div className="flex items-center gap-2 text-reactor-orange font-bold">
+                          <Zap className="h-3.5 w-3.5" />
+                          <span>Forensic Pipeline Progress</span>
+                        </div>
+                        <p className="leading-relaxed">{traceStageText}</p>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="flex h-full items-center justify-center text-surface-400 text-sm">
-                      No active trace data available.
+                    /* Trace Launcher Card */
+                    <div className="w-full max-w-xl bg-surface-default border border-surface-200 rounded-xl p-6 shadow-sm space-y-5">
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-3 border-b border-surface-200 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-reactor-orange shrink-0">
+                            <Zap className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-surface-900 dark:text-white">
+                              Trace Suspect Wallet
+                            </h3>
+                            <p className="text-xs text-surface-500">
+                              Execute BFS transaction traversal across TRON ledger & compute VASP attribution
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-surface-100 border border-surface-200 text-surface-600">
+                          {caseData.chain || 'TRON'} &bull; {caseData.asset || 'TRC-20'}
+                        </span>
+                      </div>
+
+                      {/* Error Alert if any */}
+                      {traceError && (
+                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 flex items-start gap-2.5 text-xs text-red-700 dark:text-red-300">
+                          <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <span className="font-semibold block">Execution Failed</span>
+                            <span className="mt-0.5 block">{traceError}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Target Wallet Input */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-wide">
+                            Suspect Wallet Address
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setTraceWalletInput('TYDZSxdBzWnCuB4jF3K6j5X3qW7b9X1234')}
+                            className="text-[11px] font-medium text-brand-blue dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            Use Demo Wallet
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={traceWalletInput}
+                          onChange={(e) => setTraceWalletInput(e.target.value.trim())}
+                          placeholder="e.g. TYDZSxdBzWnCuB4jF3K6j5X3qW7b9X1234"
+                          className="w-full px-3 py-2 text-xs font-mono bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 rounded-lg text-surface-800 dark:text-surface-100 focus:outline-none focus:border-reactor-orange focus:ring-1 focus:ring-reactor-orange transition"
+                        />
+                        <p className="text-[11px] text-surface-400">
+                          34-character TRON Base58Check address starting with 'T'.
+                        </p>
+                      </div>
+
+                      {/* Execution Mode Selector (P1) */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-surface-700 dark:text-surface-300 uppercase tracking-wide block">
+                          Execution Engine Mode
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => setTraceExecutionMode('DEMO')}
+                            className={`p-3 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
+                              traceExecutionMode === 'DEMO'
+                                ? 'border-amber-500/60 bg-amber-500/10 text-surface-900 dark:text-white ring-1 ring-amber-500/40'
+                                : 'border-surface-200 hover:bg-surface-50 dark:hover:bg-surface-200/40 text-surface-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-bold flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                                DEMO REPLAY
+                              </span>
+                              <span className="text-[10px] font-mono bg-amber-500/20 text-amber-800 dark:text-amber-300 px-1.5 py-0.2 rounded">
+                                Courtroom Fixture
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-surface-500 leading-tight">
+                              Offline deterministic dataset. 100% reproducible for judge/courtroom validation.
+                            </p>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setTraceExecutionMode('LIVE')}
+                            className={`p-3 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
+                              traceExecutionMode === 'LIVE'
+                                ? 'border-emerald-500/60 bg-emerald-500/10 text-surface-900 dark:text-white ring-1 ring-emerald-500/40'
+                                : 'border-surface-200 hover:bg-surface-50 dark:hover:bg-surface-200/40 text-surface-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-bold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                LIVE TRON RPC
+                              </span>
+                              <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 rounded">
+                                Mainnet
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-surface-500 leading-tight">
+                              Live on-chain RPC queries against TRON network. Reconstructs live wallet transfers.
+                            </p>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Traversal Controls */}
+                      <div className="grid grid-cols-2 gap-4 border-t border-surface-200 pt-3 text-xs">
+                        <div>
+                          <label className="font-semibold text-surface-600 dark:text-surface-300 block mb-1">
+                            Traversal Depth: <span className="font-bold text-surface-900 dark:text-white">{traceHops} Hops</span>
+                          </label>
+                          <div className="flex items-center gap-1">
+                            {[2, 3, 4, 5, 6].map(h => (
+                              <button
+                                key={h}
+                                type="button"
+                                onClick={() => setTraceHops(h)}
+                                className={`flex-1 py-1 rounded text-xs font-mono font-bold transition cursor-pointer ${
+                                  traceHops === h
+                                    ? 'bg-reactor-orange text-white'
+                                    : 'bg-surface-100 hover:bg-surface-200 text-surface-700 border border-surface-200'
+                                }`}
+                              >
+                                {h}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="font-semibold text-surface-600 dark:text-surface-300 block mb-1">
+                            Min Value Filter
+                          </label>
+                          <div className="flex items-center gap-1">
+                            {[0.0, 1.0, 10.0, 100.0].map(val => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => setTraceMinUsd(val)}
+                                className={`flex-1 py-1 rounded text-[11px] font-mono font-bold transition cursor-pointer ${
+                                  traceMinUsd === val
+                                    ? 'bg-brand-blue text-white'
+                                    : 'bg-surface-100 hover:bg-surface-200 text-surface-700 border border-surface-200'
+                                }`}
+                              >
+                                ${val}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Submit Action */}
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteTrace()}
+                        disabled={isTracing || !(traceWalletInput || caseData.suspect_wallet)}
+                        className="w-full py-2.5 rounded-lg bg-reactor-orange hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-2 transition shadow-sm cursor-pointer"
+                      >
+                        <Play className="h-4 w-4 fill-current" />
+                        <span>Execute Multi-Hop Trace</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -408,7 +756,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                loading={false}
                onNavigateToEvidence={() => setActiveTab('evidence')}
                onOpenReportModal={() => setIsExportModalOpen(true)}
-               executionMode="DEMO"
+               executionMode={graph?.meta?.execution_mode || (traces.find(t => t.trace_id === selectedTraceId)?.execution_mode) || 'DEMO'}
                caseData={caseData}
              />
           </div>
@@ -452,6 +800,96 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
         <span>Crypto-Tracer &bull; Enterprise Blockchain Forensic Intelligence Platform</span>
         <span>Cryptographic Audit Trail: Active &bull; Section 63 BSA Certified</span>
       </footer>
+
+      {/* Re-Trace Modal */}
+      {isRetraceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-surface-default border border-surface-200 rounded-xl max-w-md w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-surface-200 pb-3">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-reactor-orange" />
+                <h3 className="font-bold text-sm text-surface-900 dark:text-white">Execute Re-Trace</h3>
+              </div>
+              <button 
+                onClick={() => setIsRetraceModalOpen(false)}
+                className="text-surface-400 hover:text-surface-700 p-1 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Wallet input */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-surface-700 dark:text-surface-300">Target Suspect Wallet</label>
+              <input
+                type="text"
+                value={traceWalletInput}
+                onChange={(e) => setTraceWalletInput(e.target.value.trim())}
+                className="w-full px-3 py-1.5 text-xs font-mono bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 rounded-lg text-surface-800 dark:text-surface-100"
+              />
+            </div>
+
+            {/* Mode selection */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-surface-700 dark:text-surface-300">Execution Mode</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTraceExecutionMode('DEMO')}
+                  className={`p-2 rounded-lg border text-xs font-bold text-left cursor-pointer transition ${
+                    traceExecutionMode === 'DEMO'
+                      ? 'border-amber-500 bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                      : 'border-surface-200 text-surface-600 hover:bg-surface-50'
+                  }`}
+                >
+                  <span className="block font-bold">DEMO FIXTURE</span>
+                  <span className="text-[10px] font-normal text-surface-500">Deterministic replay</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTraceExecutionMode('LIVE')}
+                  className={`p-2 rounded-lg border text-xs font-bold text-left cursor-pointer transition ${
+                    traceExecutionMode === 'LIVE'
+                      ? 'border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                      : 'border-surface-200 text-surface-600 hover:bg-surface-50'
+                  }`}
+                >
+                  <span className="block font-bold">LIVE TRON RPC</span>
+                  <span className="text-[10px] font-normal text-surface-500">On-Chain Mainnet</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Traversal Depth */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-surface-700 dark:text-surface-300">Depth ({traceHops} Hops)</label>
+              <div className="flex gap-1">
+                {[2, 3, 4, 5, 6].map(h => (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => setTraceHops(h)}
+                    className={`flex-1 py-1 rounded text-xs font-mono font-bold cursor-pointer transition ${
+                      traceHops === h ? 'bg-reactor-orange text-white' : 'bg-surface-100 text-surface-700 border border-surface-200'
+                    }`}
+                  >
+                    {h}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleExecuteTrace()}
+              disabled={isTracing}
+              className="w-full py-2 bg-reactor-orange hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              {isTracing ? <Activity className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+              <span>Launch Traversal</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Case Notes Modal */}
       {caseData && (

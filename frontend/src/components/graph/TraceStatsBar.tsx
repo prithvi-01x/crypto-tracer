@@ -25,6 +25,21 @@ export const TraceStatsBar: React.FC<TraceStatsBarProps> = ({ meta, onOpenPrunin
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Metric Cards Group */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
+          {/* Engine Mode */}
+          <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded border ${
+            meta.execution_mode === 'LIVE'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300'
+          }`}>
+            <div className={`h-2 w-2 rounded-full shrink-0 ${meta.execution_mode === 'LIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+            <div>
+              <span className="text-[10px] uppercase font-semibold opacity-75 block leading-tight">Engine Mode</span>
+              <span className="font-bold font-mono text-[11px] whitespace-nowrap">
+                {meta.execution_mode === 'LIVE' ? 'LIVE TRON RPC' : 'DEMO REPLAY FIXTURE'}
+              </span>
+            </div>
+          </div>
+
           {/* Hops */}
           <div className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-surface-50 dark:bg-surface-200/60 border border-surface-200 dark:border-surface-300">
             <Layers className="h-3.5 w-3.5 text-brand-blue dark:text-blue-400 shrink-0" />

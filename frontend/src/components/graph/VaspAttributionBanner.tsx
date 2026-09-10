@@ -22,6 +22,7 @@ export const VaspAttributionBanner: React.FC<VaspAttributionBannerProps> = ({
   attribution,
   loading = false,
   onOpenReportModal,
+  executionMode = 'DEMO',
 }) => {
   if (loading) {
     return (
@@ -81,12 +82,19 @@ export const VaspAttributionBanner: React.FC<VaspAttributionBannerProps> = ({
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-surface-800 uppercase">Attribution Finding: {vaspName}</h2>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex flex-wrap items-center gap-2 mt-1">
                   <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-base font-bold flex items-center gap-1">
                     <CheckCircle2 className="h-4 w-4" />
                     {confidenceScore} ({confidenceBand} Confidence)
                   </span>
                   <span className="text-base text-surface-500 font-medium">{hypothesisLabel}</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-mono font-bold border ${
+                    executionMode === 'LIVE'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                      : 'bg-amber-50 text-amber-700 border-amber-300'
+                  }`}>
+                    {executionMode === 'LIVE' ? 'LIVE ON-CHAIN RPC' : 'DEMO REPLAY FIXTURE'}
+                  </span>
                 </div>
               </div>
             </div>

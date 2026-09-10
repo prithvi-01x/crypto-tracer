@@ -17,6 +17,7 @@ export async function startTrace(input: TraceCreateInput): Promise<TraceStatus> 
       asset: input.asset || 'TRC20:USDT',
       max_hops: input.max_hops ?? 4,
       min_relevant_usd: input.min_relevant_usd ?? 1.0,
+      execution_mode: input.execution_mode || 'DEMO',
     }),
   });
 
@@ -25,15 +26,6 @@ export async function startTrace(input: TraceCreateInput): Promise<TraceStatus> 
     throw new Error(errorData.detail || `Failed to initiate trace: ${response.statusText}`);
   }
 
-  return response.json();
-}
-
-export async function getTraceStatus(traceId: string): Promise<TraceStatus> {
-  const response = await fetch(`${API_BASE}/traces/${traceId}`);
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Failed to fetch trace status: ${response.statusText}`);
-  }
   return response.json();
 }
 
