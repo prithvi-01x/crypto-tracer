@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { CaseItem } from './types/case';
 import { getCases } from './api/cases';
+import { getSystemHealth } from './api/health';
 import { CaseListView } from './components/cases/CaseListView';
 import { CaseDetailsView } from './components/cases/CaseDetailsView';
 import { NewCaseModal } from './components/cases/NewCaseModal';
@@ -21,6 +22,8 @@ export default function App() {
   const [isNewCaseOpen, setIsNewCaseOpen] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [globalSearch, setGlobalSearch] = useState<string>('');
+  const [healthStatus, setHealthStatus] = useState<'HEALTHY' | 'DEGRADED' | 'CHECKING'>('CHECKING');
 
   useEffect(() => {
     if (isDarkMode) {
@@ -30,6 +33,11 @@ export default function App() {
     }
   }, [isDarkMode]);
 
+  useEffect(() => {
+    getSystemHealth()
+      .then((res) => setHealthStatus(res.status === 'HEALTHY' ? 'HEALTHY' : 'DEGRADED'))
+      .catch(() => setHealthStatus('DEGRADED'));
+  }, []);
 
   const loadCases = async () => {
     setCasesLoading(true);
@@ -69,29 +77,43 @@ export default function App() {
             </div>
           </div>
 
-          {/* Center Nav / Global Search (simplified) */}
+          {/* Center Nav / Global Search */}
           <div className="hidden md:flex flex-1 max-w-lg items-center px-4">
              <div className="relative w-full">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-surface-400" />
                <input 
                  type="text" 
+                 value={globalSearch}
+                 onChange={(e) => {
+                   setGlobalSearch(e.target.value);
+                   if (selectedCaseId) {
+                     setSelectedCaseId(null);
+                   }
+                 }}
                  placeholder="Search address, transaction hash, FIR, or victim..."
-                 className="w-full pl-9 pr-4 py-1.5 text-lg bg-surface-50 border border-surface-200 rounded text-surface-800 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue placeholder:text-surface-400"
+                 className="w-full pl-9 pr-4 py-1.5 text-base bg-surface-50 border border-surface-200 rounded text-surface-800 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue placeholder:text-surface-400"
                />
              </div>
           </div>
 
           {/* Right Utilities */}
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-50 border border-emerald-100">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-base font-semibold text-emerald-700">LIVE TRON RPC</span>
-            </div>
+            {healthStatus === 'HEALTHY' ? (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800" title="Backend, PostgreSQL & Redis services healthy">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">SYSTEM ONLINE</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800" title="Service degraded or connecting">
+                <div className="h-2 w-2 rounded-full bg-amber-500" />
+                <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">LOCAL MODE</span>
+              </div>
+            )}
             
             <button className="text-surface-500 hover:text-surface-800">
               <Bell className="h-4 w-4" />
             </button>
-                        <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-surface-500 hover:text-surface-800">
+            <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-surface-500 hover:text-surface-800" title="Toggle dark mode">
               {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
             <button className="text-surface-500 hover:text-surface-800">
@@ -144,6 +166,8 @@ export default function App() {
               onSelectCase={(id) => setSelectedCaseId(id)}
               onOpenNewCase={() => setIsNewCaseOpen(true)}
               onRefresh={loadCases}
+              searchTerm={globalSearch}
+              onSearchChange={setGlobalSearch}
             />
           </div>
         )}

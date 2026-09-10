@@ -16,6 +16,8 @@ interface CaseListViewProps {
   onSelectCase: (caseId: string) => void;
   onOpenNewCase: () => void;
   onRefresh: () => void;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
 }
 
 export const CaseListView: React.FC<CaseListViewProps> = ({
@@ -24,9 +26,20 @@ export const CaseListView: React.FC<CaseListViewProps> = ({
   onSelectCase,
   onOpenNewCase,
   onRefresh,
+  searchTerm: externalSearchTerm,
+  onSearchChange,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
   const [isSeedingDemo, setIsSeedingDemo] = useState(false);
+
+  const activeSearchTerm = externalSearchTerm !== undefined ? externalSearchTerm : internalSearchTerm;
+  const handleSearchChange = (val: string) => {
+    if (onSearchChange) {
+      onSearchChange(val);
+    } else {
+      setInternalSearchTerm(val);
+    }
+  };
 
   const handleLoadDemoCase = async () => {
     setIsSeedingDemo(true);
@@ -44,11 +57,15 @@ export const CaseListView: React.FC<CaseListViewProps> = ({
   };
 
   const filteredCases = cases.filter((c) => {
-    const q = searchTerm.toLowerCase();
+    const q = activeSearchTerm.toLowerCase().trim();
+    if (!q) return true;
     return (
       c.fir_number.toLowerCase().includes(q) ||
       (c.victim_reference && c.victim_reference.toLowerCase().includes(q)) ||
-      (c.suspect_wallet && c.suspect_wallet.toLowerCase().includes(q))
+      (c.suspect_wallet && c.suspect_wallet.toLowerCase().includes(q)) ||
+      (c.ack_number && c.ack_number.toLowerCase().includes(q)) ||
+      (c.notes && c.notes.toLowerCase().includes(q)) ||
+      (c.chain && c.chain.toLowerCase().includes(q))
     );
   });
 
@@ -117,8 +134,8 @@ export const CaseListView: React.FC<CaseListViewProps> = ({
               <input
                 type="text"
                 placeholder="Search cases..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={activeSearchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 rounded bg-surface-default border border-surface-200 text-base text-surface-800 placeholder-surface-400 focus:outline-none focus:border-brand-blue"
               />
             </div>
