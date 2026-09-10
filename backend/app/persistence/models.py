@@ -44,6 +44,7 @@ class Case(Base):
     evidence_items = relationship("EvidenceItemModel", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
     audit_events = relationship("AuditEventModel", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
     reports = relationship("ReportModel", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
+    findings = relationship("FindingRecord", back_populates="case", cascade="all, delete-orphan", lazy="selectin")
 
 
 class Trace(Base):
@@ -75,6 +76,7 @@ class Trace(Base):
     attributions = relationship("AttributionResult", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
     evidence_items = relationship("EvidenceItemModel", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
     reports = relationship("ReportModel", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
+    findings = relationship("FindingRecord", back_populates="trace", cascade="all, delete-orphan", lazy="selectin")
 
 
 class AttributionResult(Base):
@@ -157,4 +159,35 @@ class ReportModel(Base):
 
     case = relationship("Case", back_populates="reports")
     trace = relationship("Trace", back_populates="reports")
+
+
+class FindingRecord(Base):
+    __tablename__ = "findings"
+
+    id = Column(String(64), primary_key=True)
+    case_id = Column(String(36), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
+    trace_id = Column(String(36), ForeignKey("traces.id", ondelete="CASCADE"), nullable=True, index=True)
+    finding_type = Column(String(50), nullable=False, index=True)
+    severity = Column(String(20), nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    source_signal = Column(String(100), nullable=False)
+    confidence = Column(Numeric(precision=5, scale=4), nullable=True)
+    related_address = Column(String(255), nullable=True)
+    related_tx_hash = Column(String(255), nullable=True)
+    related_vasp = Column(String(100), nullable=True)
+    evidence_refs = Column(JSON, nullable=True)
+    status = Column(String(20), nullable=False, default="OPEN", index=True)  # OPEN, REVIEWED, DISMISSED
+    reviewed_by = Column(String(100), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    review_notes = Column(Text, nullable=True)
+    graph_node_id = Column(String(255), nullable=True)
+    graph_edge_id = Column(String(255), nullable=True)
+    raw_payload = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    case = relationship("Case", back_populates="findings")
+    trace = relationship("Trace", back_populates="findings")
+
 
