@@ -5,9 +5,9 @@
 [![SIH 2026](https://img.shields.io/badge/SIH-2026%20Prototype-blue.svg)](https://sih.gov.in/)
 [![Network](https://img.shields.io/badge/Network-TRON%20%28TRC--20%20USDT%29-red.svg)](https://tron.network/)
 [![Backend](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Python%203.12-emerald.svg)](https://fastapi.tiangolo.com/)
-[![Frontend](https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript-cyan.svg)](https://react.dev/)
+[![Frontend](https://img.shields.io/badge/Frontend-React%2019%20%7C%20TypeScript-cyan.svg)](https://react.dev/)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%2016%20%7C%20Redis%207-darkblue.svg)](https://www.postgresql.org/)
-[![Tests](https://img.shields.io/badge/Tests-83%20Passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-94%20Passing-brightgreen.svg)]()
 [![Validation Score](https://img.shields.io/badge/SIH%20Readiness-9.8%20%2F%2010-purple.svg)]()
 
 ---
@@ -355,7 +355,7 @@ Crypto-Tracer strictly adheres to the updated Indian criminal jurisprudence enac
   - Target deposit address identified on-chain.
   - Demand for beneficial owner KYC, registered mobile numbers, email addresses, IP access logs, and linked withdrawal bank/UPI accounts.
 
-> **Deprecated Nomenclature Warning:** Crypto-Tracer does not use or reference outdated pre-2023 statutory terminology (Section 65B IEA or Section 91 CrPC) anywhere in its codebase, user interface, or generated legal reports.
+> **Statutory Modernization Note:** Crypto-Tracer strictly implements the contemporary criminal jurisprudence of Bharatiya Nagarik Suraksha Sanhita (BNSS 2023) and Bharatiya Sakshya Adhiniyam (BSA 2023). Where helpful for judicial clarity and transitional familiarity during the phase-in period, formal notices and UI descriptions provide clear transitional parentheticals (e.g., *Section 94 BNSS, formerly Section 91 CrPC* and *Section 63 BSA, formerly Section 65B IEA*).
 
 ---
 
@@ -494,7 +494,7 @@ crypto-tracer/
 
 ## API Reference
 
-The backend exposes 20 verified RESTful endpoints under `/api/v1` and root:
+The backend exposes 26 verified RESTful operations across 23 path templates under `/api/v1` and root:
 
 | Method | Endpoint | Description | Request / Response Summary |
 |---|---|---|---|
@@ -504,12 +504,17 @@ The backend exposes 20 verified RESTful endpoints under `/api/v1` and root:
 | `GET` | `/api/v1/cases` | List Cases | Returns paginated list of registered investigation cases with metrics. |
 | `POST` | `/api/v1/cases` | Register Case | Creates a new case with FIR number, victim reference, and loss amount. |
 | `GET` | `/api/v1/cases/{id}` | Case Details | Returns complete metadata for a specific investigation case. |
+| `PATCH` | `/api/v1/cases/{id}` | Update Case | Updates investigation status or case notes. |
+| `POST` | `/api/v1/cases/{id}/notes` | Append Case Note | Appends timestamped investigator note with author attribution. |
 | `GET` | `/api/v1/cases/{id}/traces` | List Traces | Returns all multi-hop traces executed under a specific case. |
-| `POST` | `/api/v1/traces` | Launch Trace | Executes multi-hop BFS traversal for a suspect wallet. |
+| `POST` | `/api/v1/traces` | Launch Trace | Executes multi-hop BFS traversal for a suspect wallet (DEMO or LIVE). |
 | `GET` | `/api/v1/traces/{id}` | Trace Status | Returns execution metrics, hop count, and traversal status. |
 | `GET` | `/api/v1/traces/{id}/graph` | Graph Topology | Returns nodes, directed edges, and pruning metadata for Cytoscape. |
 | `GET` | `/api/v1/traces/{id}/attribution` | VASP Attribution | Returns multi-factor attribution scores, factors, and candidate wallet. |
-| `GET` | `/api/v1/traces/{id}/evidence` | Evidence DAG | Returns complete 59-item evidence DAG with RFC-8785 hashes. |
+| `GET` | `/api/v1/traces/{id}/evidence` | Evidence DAG | Returns complete evidence DAG with RFC-8785 hashes. |
+| `GET` | `/api/v1/traces/{id}/findings` | Trace Findings | Returns detected risk indicators, rapid sweep alerts, and peel chains. |
+| `GET` | `/api/v1/cases/{id}/findings` | Case Findings | Returns consolidated forensic alerts across all case traces. |
+| `POST` | `/api/v1/cases/{id}/findings/{fid}/review` | Review Finding | Records officer verification/dismissal of a forensic finding. |
 | `GET` | `/api/v1/cases/{id}/audit` | Case Audit Trail | Returns chronological log of investigator actions and review events. |
 | `POST` | `/api/v1/cases/{id}/audit` | Append Audit | Appends a signed investigator review or decision event to the audit trail. |
 | `POST` | `/api/v1/cases/{id}/attributions/{addr}/review` | Record Review | Records officer validation of an attribution hypothesis. |
@@ -517,6 +522,7 @@ The backend exposes 20 verified RESTful endpoints under `/api/v1` and root:
 | `POST` | `/api/v1/cases/{id}/reports/bnss94` | Draft Notice | Compiles Section 94 BNSS Legal Production Order PDF. |
 | `GET` | `/api/v1/cases/{id}/reports` | List Reports | Returns all generated legal reports and download metadata for a case. |
 | `GET` | `/api/v1/reports/{id}/download` | Download PDF | Streams the binary PDF report file with verifiable content headers. |
+| `GET` | `/api/v1/demo/status` | Demo Status | Returns canonical scenario specifications, hops topology, and status. |
 | `POST` | `/api/v1/demo/seed` | Demo Replay Seed | Resets and seeds the canonical SIH 2026 evaluation scenario. |
 
 ---
