@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   ArrowLeft, 
   Download,
@@ -16,7 +16,9 @@ import {
   Sparkles,
   X,
   Maximize2,
-  Minimize2
+  Minimize2,
+  GripVertical,
+  Sliders
 } from 'lucide-react';
 import type { CaseItem } from '../../types/case';
 import type { InvestigationGraph, TraceStatus, GraphNode, GraphEdge } from '../../types/graph';
@@ -70,6 +72,43 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
 
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [isGraphMaximized, setIsGraphMaximized] = useState<boolean>(false);
+  const [graphWidthPercent, setGraphWidthPercent] = useState<number>(75);
+  const [isDraggingSplitter, setIsDraggingSplitter] = useState<boolean>(false);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
+
+  // Drag handler for dynamic panel splitter
+  const handleSplitterPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDraggingSplitter(true);
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      if (!splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const offsetX = moveEvent.clientX - rect.left;
+      const totalWidth = rect.width;
+      if (totalWidth <= 0) return;
+
+      let newPercent = Math.round((offsetX / totalWidth) * 100);
+      if (newPercent < 40) newPercent = 40;
+      if (newPercent > 98) newPercent = 100;
+
+      setGraphWidthPercent(newPercent);
+      if (newPercent >= 100) {
+        setIsGraphMaximized(true);
+      } else {
+        setIsGraphMaximized(false);
+      }
+    };
+
+    const onPointerUp = () => {
+      setIsDraggingSplitter(false);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  }, []);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
 
   const [activeTab, setActiveTab] = useState<'graph' | 'attribution' | 'evidence' | 'reports' | 'findings'>('graph');
@@ -422,11 +461,21 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
             )}
 
             {/* Main Graph Split Screen */}
-            <div className="flex-1 flex flex-col lg:flex-row gap-2.5 min-h-0 overflow-hidden">
+            <div 
+              ref={splitContainerRef}
+              className={`flex-1 flex flex-col lg:flex-row gap-0 min-h-0 overflow-hidden ${
+                isDraggingSplitter ? 'select-none cursor-col-resize' : ''
+              }`}
+            >
               {/* Graph Canvas Container */}
-              <div className={`h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col overflow-hidden shadow-xs transition-all duration-300 ${
-                isGraphMaximized ? 'w-full' : 'w-full lg:w-[73%] xl:w-[74%] 2xl:w-[75%]'
-              }`}>
+              <div 
+                style={{ 
+                  width: isGraphMaximized || graphWidthPercent >= 100 ? '100%' : `${graphWidthPercent}%` 
+                }}
+                className={`h-[55%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col overflow-hidden shadow-xs ${
+                  isDraggingSplitter ? 'transition-none' : 'transition-[width] duration-150'
+                }`}
+              >
                 <div className="px-3 py-2 border-b border-surface-200 flex justify-between items-center bg-surface-50">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-sm text-surface-800 dark:text-surface-100">
@@ -452,10 +501,49 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Dynamic Canvas Width Slider Option */}
+                    {graph && (
+                      <div 
+                        className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded text-xs font-semibold border border-surface-200 bg-surface-default text-surface-700 dark:text-surface-200 shadow-2xs"
+                        title={`Adjust Canvas Width: ${isGraphMaximized ? 100 : graphWidthPercent}%`}
+                      >
+                        <Sliders className="h-3.5 w-3.5 text-reactor-orange" />
+                        <span className="text-[10px] uppercase font-bold text-surface-500">Width</span>
+                        <input
+                          type="range"
+                          min={40}
+                          max={100}
+                          step={1}
+                          value={isGraphMaximized ? 100 : graphWidthPercent}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setGraphWidthPercent(val);
+                            if (val >= 100) {
+                              setIsGraphMaximized(true);
+                            } else {
+                              setIsGraphMaximized(false);
+                            }
+                          }}
+                          className="w-16 sm:w-20 md:w-24 h-1.5 bg-surface-200 dark:bg-surface-300 rounded-lg appearance-none cursor-pointer accent-reactor-orange"
+                          aria-label="Canvas Width Slider"
+                        />
+                        <span className="font-mono text-[11px] font-bold text-surface-800 dark:text-surface-100 w-8 text-right">
+                          {isGraphMaximized ? '100%' : `${graphWidthPercent}%`}
+                        </span>
+                      </div>
+                    )}
                     {graph && (
                       <button
-                        onClick={() => setIsGraphMaximized(!isGraphMaximized)}
+                        onClick={() => {
+                          if (isGraphMaximized) {
+                            setIsGraphMaximized(false);
+                            if (graphWidthPercent >= 100) setGraphWidthPercent(75);
+                          } else {
+                            setIsGraphMaximized(true);
+                            setGraphWidthPercent(100);
+                          }
+                        }}
                         className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border border-surface-200 bg-surface-default hover:bg-surface-100 text-surface-700 dark:text-surface-200 transition cursor-pointer"
                         title={isGraphMaximized ? "Restore Split View" : "Maximize Graph"}
                       >
@@ -724,8 +812,32 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                 </div>
               </div>
 
+              {/* Draggable Splitter Handle (Desktop) */}
+              {!isGraphMaximized && graphWidthPercent < 100 && (
+                <div
+                  onPointerDown={handleSplitterPointerDown}
+                  onDoubleClick={() => setGraphWidthPercent(75)}
+                  className="hidden lg:flex w-2.5 items-center justify-center cursor-col-resize z-20 group relative px-0.5 hover:bg-reactor-orange/10 active:bg-reactor-orange/20 transition-colors select-none shrink-0"
+                  title="Drag slider to resize graph canvas • Double-click to reset (75%)"
+                  aria-label="Resize Graph Canvas Splitter"
+                >
+                  <div className="w-1 h-14 rounded-full bg-surface-300 dark:bg-surface-400 group-hover:bg-reactor-orange group-active:bg-reactor-orange transition-colors flex items-center justify-center">
+                    <GripVertical className="h-3.5 w-3.5 text-surface-600 dark:text-surface-200 opacity-40 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+              )}
+
               {/* Right Panel: Reactor Entity Profiler or Forensic Alerts Drawer */}
-              <div className={`${isGraphMaximized ? 'hidden' : 'w-full lg:w-[27%] xl:w-[26%] 2xl:w-[25%]'} h-[45%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col shadow-xs overflow-hidden transition-all duration-300`}>
+              <div 
+                style={{ 
+                  width: isGraphMaximized || graphWidthPercent >= 100 ? '0%' : `${100 - graphWidthPercent}%` 
+                }}
+                className={`${
+                  isGraphMaximized || graphWidthPercent >= 100 ? 'hidden' : 'flex'
+                } h-[45%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex-col shadow-xs overflow-hidden ${
+                  isDraggingSplitter ? 'transition-none' : 'transition-[width] duration-150'
+                }`}
+              >
                 {showFindingsDrawer ? (
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="p-3 border-b border-surface-200 bg-surface-50 flex items-center justify-between">

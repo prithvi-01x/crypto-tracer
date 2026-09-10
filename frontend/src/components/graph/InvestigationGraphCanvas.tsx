@@ -650,6 +650,18 @@ ${recAmount}` : ''}`;
     };
   }, [graph, attribution, onSelectNode, onSelectEdge, highlightPathToRoot, getCytoscapeStyles, isDarkMode]);
 
+  // Observe container size changes (e.g. dynamic slider resize) and trigger Cytoscape resize
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      if (cyRef.current) {
+        cyRef.current.resize();
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   // Handle label visibility toggle
   useEffect(() => {
     const cy = cyRef.current;
