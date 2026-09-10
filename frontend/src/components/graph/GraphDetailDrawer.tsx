@@ -3,6 +3,7 @@ import {
   X, 
   Wallet, 
   ArrowRight, 
+  ArrowLeftRight,
   Copy, 
   Check, 
   ExternalLink, 
@@ -13,9 +14,11 @@ import {
   Building2, 
   TrendingDown, 
   Info,
-  AlertTriangle
+  AlertTriangle,
+  Layers,
+  FileCheck
 } from 'lucide-react';
-import type { GraphNode, GraphEdge } from '../../types/graph';
+import type { InvestigationGraph, GraphNode, GraphEdge } from '../../types/graph';
 import type { AttributionResponse } from '../../types/attribution';
 import type { ForensicFindingItem } from '../../types/findings';
 
@@ -25,7 +28,10 @@ interface GraphDetailDrawerProps {
   onClose: () => void;
   onHighlightPathToRoot?: (address: string) => void;
   onNavigateToReports?: () => void;
-  onNavigateToEvidence?: () => void;
+  onNavigateToEvidence?: (evidenceId?: string) => void;
+  onNavigateToFinding?: (findingId: string) => void;
+  onSelectNodeByAddress?: (address: string) => void;
+  graph?: InvestigationGraph | null;
   attribution?: AttributionResponse | null;
   findings?: ForensicFindingItem[];
 }
@@ -37,6 +43,9 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
   onHighlightPathToRoot,
   onNavigateToReports,
   onNavigateToEvidence,
+  onNavigateToFinding,
+  onSelectNodeByAddress,
+  graph,
   attribution,
   findings = [],
 }) => {
@@ -112,13 +121,61 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
   const sentNum = selectedNode ? (typeof selectedNode.total_sent === 'string' ? parseFloat(selectedNode.total_sent) : selectedNode.total_sent) : 0;
   const netRetained = Math.max(0, (receivedNum || 0) - (sentNum || 0));
 
-  // Determine attribution candidate match
+  // Determine role classification
+  const isSuspect = selectedNode?.node_type === 'suspect' || (graph?.meta?.source_wallet && selectedNode?.address === graph.meta.source_wallet);
   const isCandidateNode = !!(selectedNode && attribution?.best_candidate?.candidate_address === selectedNode.address);
   const isEndpointNode = selectedNode?.node_type === 'endpoint';
-  const vaspName = attribution?.best_candidate?.exchange_name || 'VASP Entity';
+  const vaspName = (attribution?.best_candidate?.exchange_name || 'VASP Entity').toUpperCase();
+
+  // In-degree for consolidation detection
+  const inDegree = selectedNode && graph?.edges ? graph.edges.filter(e => e.to_address === selectedNode.address).length : 0;
+  const isConsolidation = !isSuspect && !isCandidateNode && !isEndpointNode && (
+    inDegree > 1 || 
+    (selectedNode?.hop === 2 && (receivedNum || 0) >= 40000)
+  );
+
+  let roleLabel = 'HOP MULE';
+  let roleDesc = 'Layering Pass-Through';
+  let roleBadgeClass = 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800';
+  let roleIcon = '🔗';
+
+  if (isSuspect) {
+    roleLabel = 'ROOT SUSPECT';
+    roleDesc = 'Primary Victim Loss Source';
+    roleBadgeClass = 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
+    roleIcon = '🚨';
+  } else if (isCandidateNode) {
+    roleLabel = `VASP CANDIDATE (${vaspName})`;
+    roleDesc = 'Deposit Sweep Candidate Endpoint';
+    roleBadgeClass = 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800';
+    roleIcon = '🎯';
+  } else if (isEndpointNode) {
+    roleLabel = 'VASP DESTINATION (Endpoint)';
+    roleDesc = 'Centralized Exchange Terminal Endpoint';
+    roleBadgeClass = 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+    roleIcon = '🏦';
+  } else if (isConsolidation) {
+    roleLabel = 'CONSOLIDATION HUB';
+    roleDesc = 'Intermediate Hop Aggregator';
+    roleBadgeClass = 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800';
+    roleIcon = '🔄';
+  } else {
+    roleLabel = 'INTERMEDIATE HOP MULE';
+    roleDesc = `Hop ${selectedNode?.hop || 1} Intermediate Pass-Through`;
+    roleBadgeClass = 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800';
+    roleIcon = '🔗';
+  }
 
   // Filter findings matching selected node
   const nodeFindings = selectedNode ? findings.filter(f => f.related_address === selectedNode.address || f.graph_node_id === selectedNode.address) : [];
+  
+  // Extract unique supporting evidence from node findings
+  const relevantEvidenceRefs = nodeFindings.flatMap(f => f.evidence_refs || []);
+  const uniqueEvidence = Array.from(new Map(relevantEvidenceRefs.map(item => [item.id, item])).values());
+
+  // Compute counterparty flows (inflows & outflows)
+  const inflows = selectedNode && graph?.edges ? graph.edges.filter(e => e.to_address === selectedNode.address) : [];
+  const outflows = selectedNode && graph?.edges ? graph.edges.filter(e => e.from_address === selectedNode.address) : [];
 
   return (
     <div className="flex flex-col h-full bg-surface-default dark:bg-surface-100 text-surface-800 dark:text-surface-100 transition-colors">
@@ -127,12 +184,14 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
         <div className="flex items-center gap-2.5">
           {selectedNode ? (
             <div className={`p-1.5 rounded ${
-              selectedNode.node_type === 'suspect'
+              isSuspect
                 ? 'bg-red-500/10 text-red-600 dark:text-red-400'
                 : isCandidateNode
                 ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                : selectedNode.node_type === 'endpoint'
+                : isEndpointNode
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                : isConsolidation
+                ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
                 : 'bg-blue-500/10 text-brand-blue dark:text-blue-400'
             }`}>
               <Wallet className="h-4 w-4" />
@@ -144,10 +203,10 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
           )}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-surface-800 dark:text-surface-100">
-              {selectedNode ? 'Wallet Inspection' : 'Transaction Edge'}
+              {selectedNode ? 'Wallet Inspection • Entity Profiler' : 'Transaction Edge'}
             </h3>
             <span className="text-xs text-surface-500">
-              {selectedNode ? 'Entity Profiler • Forensic Intelligence' : 'On-Chain Ledger Edge'}
+              {selectedNode ? 'Forensic Inspection & Intelligence' : 'On-Chain Ledger Edge'}
             </span>
           </div>
         </div>
@@ -165,99 +224,17 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
         {/* NODE DETAILS */}
         {selectedNode && (
           <div className="space-y-4">
-            {/* Risk / Entity Type Badge & Hop */}
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className={`px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wide border ${
-                selectedNode.node_type === 'suspect'
-                  ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-                  : isCandidateNode
-                  ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
-                  : selectedNode.node_type === 'endpoint'
-                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                  : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-              }`}>
-                {selectedNode.node_type === 'suspect' 
-                  ? '🚨 Root Suspect' 
-                  : isCandidateNode
-                  ? `🎯 VASP Candidate (${vaspName}) • Endpoint`
-                  : selectedNode.node_type === 'endpoint' 
-                  ? '🎯 Endpoint / VASP Deposit' 
-                  : '🔗 Intermediate Hop'}
-              </span>
-
-              <span className="px-2 py-0.5 rounded text-xs font-mono bg-surface-100 dark:bg-surface-200 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-300 font-semibold">
-                Hop Level: {selectedNode.hop}
-              </span>
-            </div>
-
-            {/* Active Forensic Findings for this Node if any */}
-            {nodeFindings.length > 0 && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-red-700 dark:text-red-300 flex items-center gap-1.5">
-                    <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                    <span>Flagged Forensic Indicators ({nodeFindings.length})</span>
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  {nodeFindings.slice(0, 2).map((f) => (
-                    <div key={f.finding_id} className="p-2 rounded bg-surface-default dark:bg-surface-100 border border-red-200 dark:border-red-900/40 text-[11px]">
-                      <div className="flex items-center justify-between font-semibold text-red-700 dark:text-red-300">
-                        <span>{f.title}</span>
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-red-500/20 text-red-800 dark:text-red-200 font-bold">
-                          {f.severity}
-                        </span>
-                      </div>
-                      <p className="text-surface-600 dark:text-surface-400 text-[10px] mt-0.5 line-clamp-2">
-                        {f.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* VASP Attribution Card (for Candidate or Endpoint) */}
-            {(isCandidateNode || (isEndpointNode && attribution?.best_candidate)) && attribution?.best_candidate && (
-              <div className="p-3.5 rounded-lg bg-purple-500/10 border border-purple-500/30 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-purple-700 dark:text-purple-300 font-bold uppercase text-[11px] tracking-wider">
-                    <Building2 className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-                    <span>VASP Attribution Intelligence</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/20 text-purple-800 dark:text-purple-300">
-                    {Math.round((attribution.best_candidate.confidence_score || 0) * 100)}% Match
-                  </span>
-                </div>
-                <div className="p-2.5 rounded bg-surface-default dark:bg-surface-100 border border-purple-200 dark:border-purple-900/40 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-surface-500 uppercase font-bold">Identified Entity</span>
-                    <span className="font-bold text-xs text-purple-700 dark:text-purple-300 font-mono">
-                      {attribution.best_candidate.exchange_name || 'VASP Entity'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-surface-500 uppercase font-bold">Clustering Strategy</span>
-                    <span className="font-mono text-[11px] text-surface-700 dark:text-surface-300">
-                      {attribution.best_candidate.clustering_rule || 'Deposit Sweep & Forwarding'}
-                    </span>
-                  </div>
-                  {attribution.best_candidate.attribution_type && (
-                    <div className="flex items-center justify-between pt-1 border-t border-surface-200 dark:border-surface-300/50">
-                      <span className="text-[10px] text-surface-500 uppercase font-bold">Evidence Rule</span>
-                      <span className="font-mono text-[10px] text-surface-600 dark:text-surface-400">
-                        {attribution.best_candidate.attribution_type}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Address Box */}
+            {/* 1. ENTITY IDENTITY (Dominant Header) */}
             <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2.5">
-              <div className="text-[11px] text-surface-500 uppercase font-bold tracking-wider">Wallet Address</div>
-              <div className="font-mono text-xs sm:text-[13px] text-emerald-700 dark:text-emerald-400 break-all select-all font-bold leading-relaxed p-2.5 rounded-md bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-surface-500 uppercase font-bold tracking-wider">
+                  Wallet Address
+                </span>
+                <span className="text-[10px] font-mono text-surface-500">
+                  {selectedNode.chain || 'TRON'}
+                </span>
+              </div>
+              <div className="font-mono text-xs sm:text-[13px] text-emerald-700 dark:text-emerald-400 break-all select-all font-extrabold leading-relaxed p-2.5 rounded-md bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 shadow-2xs">
                 {selectedNode.address}
               </div>
               <div className="flex justify-between items-center pt-1 border-t border-surface-200 dark:border-surface-300">
@@ -268,7 +245,7 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
                   {copiedKey === 'node-addr' ? (
                     <>
                       <Check className="h-3.5 w-3.5 text-emerald-500" />
-                      <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
+                      <span className="text-emerald-600 dark:text-emerald-400">Copied Address</span>
                     </>
                   ) : (
                     <>
@@ -283,15 +260,33 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
                   rel="noreferrer"
                   className="flex items-center gap-1 text-xs text-brand-blue dark:text-blue-400 hover:underline transition font-semibold"
                 >
-                  <span>TronScan</span>
+                  <span>Verify on TronScan</span>
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </div>
             </div>
 
-            {/* 2-Column Financial Summary Card */}
+            {/* 2. ROLE & CLASSIFICATION */}
+            <div className="p-3 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className={`px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wide border flex items-center gap-1.5 ${roleBadgeClass}`}>
+                  <span>{roleIcon}</span>
+                  <span>{roleLabel}</span>
+                </span>
+                <span className="text-[11px] text-surface-500 hidden sm:inline font-medium">
+                  {roleDesc}
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded text-xs font-mono bg-surface-100 dark:bg-surface-200 text-surface-700 dark:text-surface-300 border border-surface-200 dark:border-surface-300 font-bold">
+                Hop Level: {selectedNode.hop}
+              </span>
+            </div>
+
+            {/* 3. KEY FINANCIAL & TRANSACTION METRICS */}
             <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2.5">
-              <div className="text-[11px] text-surface-500 uppercase font-bold tracking-wider">Financial Ledger Profile</div>
+              <div className="text-[10px] text-surface-500 uppercase font-bold tracking-wider">
+                Financial Ledger Metrics
+              </div>
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="p-2.5 rounded-md bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
                   <span className="text-[10px] text-surface-500 block uppercase font-bold tracking-wider">Total Received</span>
@@ -323,26 +318,214 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
               </div>
             </div>
 
-            {/* Forensic Movement Narrative */}
-            <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300 space-y-2">
-              <div className="text-[11px] text-surface-500 uppercase font-bold tracking-wider flex items-center gap-1.5">
-                <TrendingDown className="h-3.5 w-3.5 text-brand-blue dark:text-blue-400" />
-                <span>Forensic Interpretation</span>
+            {/* 4. VASP INTELLIGENCE / ATTRIBUTION */}
+            {(isCandidateNode || (isEndpointNode && attribution?.best_candidate)) && attribution?.best_candidate && (
+              <div className="p-3.5 rounded-lg bg-purple-500/10 border border-purple-500/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-purple-700 dark:text-purple-300 font-bold uppercase text-[10px] tracking-wider">
+                    <Building2 className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                    <span>VASP Attribution Intelligence</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/20 text-purple-800 dark:text-purple-300">
+                    {Math.round((attribution.best_candidate.confidence_score || 0) * 100)}% Match ({attribution.best_candidate.confidence_band || 'HIGH'})
+                  </span>
+                </div>
+                <div className="p-2.5 rounded bg-surface-default dark:bg-surface-100 border border-purple-200 dark:border-purple-900/40 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-surface-500 uppercase font-bold">Identified VASP</span>
+                    <span className="font-bold text-xs text-purple-700 dark:text-purple-300 font-mono">
+                      {attribution.best_candidate.exchange_name || 'VASP Entity'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-surface-500 uppercase font-bold">Clustering Strategy</span>
+                    <span className="font-mono text-[11px] text-surface-700 dark:text-surface-300">
+                      {attribution.best_candidate.clustering_rule || 'Deposit Sweep & Forwarding'}
+                    </span>
+                  </div>
+                  {attribution.best_candidate.attribution_type && (
+                    <div className="flex items-center justify-between pt-1 border-t border-surface-200 dark:border-surface-300/50">
+                      <span className="text-[10px] text-surface-500 uppercase font-bold">Evidence Rule</span>
+                      <span className="font-mono text-[10px] text-surface-600 dark:text-surface-400">
+                        {attribution.best_candidate.attribution_type}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-purple-800/80 dark:text-purple-300/80 italic leading-tight">
+                  Analytical attribution hypothesis derived from on-chain patterns. Does not constitute autonomous legal proof of ownership.
+                </p>
               </div>
-              <p className="text-xs sm:text-[13px] text-surface-700 dark:text-surface-200 leading-relaxed font-normal">
-                {selectedNode.node_type === 'suspect' ? (
-                  'Designated primary victim loss exit / suspect source wallet. All downstream funds cascade from this root address across multi-hop layering.'
-                ) : isCandidateNode || selectedNode.node_type === 'endpoint' ? (
-                  `Designated terminal cashout destination cluster. Correlated with recognized ${vaspName} deposit sweeps for crypto-to-fiat off-ramping.`
+            )}
+
+            {/* 5. FORENSIC FINDINGS */}
+            {nodeFindings.length > 0 && (
+              <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-300 flex items-center gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                    <span>Correlated Forensic Findings ({nodeFindings.length})</span>
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {nodeFindings.map((f) => (
+                    <div key={f.finding_id} className="p-2.5 rounded bg-surface-default dark:bg-surface-100 border border-red-200 dark:border-red-900/40 space-y-1">
+                      <div className="flex items-center justify-between font-semibold text-red-700 dark:text-red-300 text-xs">
+                        <span>{f.title}</span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-red-500/20 text-red-800 dark:text-red-200 font-bold">
+                          {f.severity}
+                        </span>
+                      </div>
+                      <p className="text-surface-600 dark:text-surface-400 text-[11px] leading-relaxed">
+                        {f.description}
+                      </p>
+                      {onNavigateToFinding && (
+                        <div className="pt-1 flex justify-end">
+                          <button
+                            onClick={() => onNavigateToFinding(f.finding_id)}
+                            className="text-[10px] font-bold text-brand-blue dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <span>Inspect Finding</span>
+                            <ArrowRight className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 6. SUPPORTING EVIDENCE */}
+            {uniqueEvidence.length > 0 && (
+              <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-surface-500 uppercase font-bold tracking-wider flex items-center gap-1">
+                    <FileCheck className="h-3.5 w-3.5 text-emerald-500" />
+                    <span>Supporting Evidentiary Records ({uniqueEvidence.length})</span>
+                  </span>
+                  <span className="font-mono text-[10px] text-surface-500">BSA §63</span>
+                </div>
+                <div className="space-y-1.5">
+                  {uniqueEvidence.map((ev) => (
+                    <div 
+                      key={ev.id} 
+                      className="p-2 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 text-xs flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-brand-light dark:bg-blue-950/60 text-brand-blue dark:text-blue-400">
+                            {ev.classification}
+                          </span>
+                          <span className="font-mono text-[11px] font-semibold text-surface-800 dark:text-surface-200 truncate">
+                            {ev.id}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-surface-500 truncate mt-0.5">
+                          {ev.title} &bull; SHA256: {ev.content_hash.substring(0, 8)}...
+                        </p>
+                      </div>
+                      {onNavigateToEvidence && (
+                        <button
+                          onClick={() => onNavigateToEvidence(ev.id)}
+                          className="text-[11px] text-brand-blue dark:text-blue-400 font-semibold hover:underline shrink-0 flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <span>View</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 7. RELATED FLOWS & COUNTERPARTIES */}
+            {(inflows.length > 0 || outflows.length > 0) && (
+              <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2.5">
+                <div className="text-[10px] text-surface-500 uppercase font-bold tracking-wider flex items-center gap-1.5">
+                  <ArrowLeftRight className="h-3.5 w-3.5 text-brand-blue dark:text-blue-400" />
+                  <span>Observed Counterparty Transfers ({inflows.length + outflows.length})</span>
+                </div>
+
+                {inflows.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
+                      Incoming Inflows ({inflows.length})
+                    </span>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {inflows.map((inf) => (
+                        <div 
+                          key={inf.id} 
+                          className="flex items-center justify-between p-1.5 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 text-[11px]"
+                        >
+                          <button
+                            onClick={() => onSelectNodeByAddress?.(inf.from_address)}
+                            className="font-mono text-brand-blue dark:text-blue-400 hover:underline truncate max-w-[170px] text-left cursor-pointer"
+                            title={`Jump to sender: ${inf.from_address}`}
+                          >
+                            &larr; {inf.from_address.slice(0, 8)}...{inf.from_address.slice(-6)}
+                          </button>
+                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                            +{formatUsdt(inf.amount)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {outflows.length > 0 && (
+                  <div className="space-y-1 pt-1 border-t border-surface-200 dark:border-surface-300">
+                    <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block">
+                      Outgoing Outflows ({outflows.length})
+                    </span>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {outflows.map((outf) => (
+                        <div 
+                          key={outf.id} 
+                          className="flex items-center justify-between p-1.5 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 text-[11px]"
+                        >
+                          <button
+                            onClick={() => onSelectNodeByAddress?.(outf.to_address)}
+                            className="font-mono text-brand-blue dark:text-blue-400 hover:underline truncate max-w-[170px] text-left cursor-pointer"
+                            title={`Jump to recipient: ${outf.to_address}`}
+                          >
+                            &rarr; {outf.to_address.slice(0, 8)}...{outf.to_address.slice(-6)}
+                          </button>
+                          <span className="font-mono font-bold text-red-600 dark:text-red-400 shrink-0">
+                            -{formatUsdt(outf.amount)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Forensic Movement Narrative */}
+            <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300 space-y-1.5">
+              <div className="text-[10px] text-surface-500 uppercase font-bold tracking-wider flex items-center gap-1.5">
+                <TrendingDown className="h-3.5 w-3.5 text-brand-blue dark:text-blue-400" />
+                <span>Forensic Movement Narrative</span>
+              </div>
+              <p className="text-xs sm:text-[12px] text-surface-700 dark:text-surface-200 leading-relaxed font-normal">
+                {isSuspect ? (
+                  'Designated primary victim loss exit / suspect source wallet. Stolen liquidity originates at this root node and is aggressively split or routed forward across downstream mule hops.'
+                ) : isCandidateNode || isEndpointNode ? (
+                  `Designated terminal cashout destination cluster. Correlated with recognized ${vaspName} deposit aggregation sweeps for crypto-to-fiat off-ramping.`
+                ) : isConsolidation ? (
+                  `Consolidation hub wallet at hop ${selectedNode.hop}. Gathers fragmented mule disbursements into a single high-volume batch prior to exchange deposit.`
                 ) : (
-                  `Intermediate pass-through hop ${selectedNode.hop}. Used to rapidly split or consolidate stolen liquidity before depositing to centralized exchanges.`
+                  `Intermediate pass-through hop ${selectedNode.hop}. Used to rapidly split, layer, and obscure stolen liquidity between the suspect root and destination endpoints.`
                 )}
               </p>
             </div>
 
-            {/* Quick Actions */}
+            {/* 8. INVESTIGATOR ACTIONS */}
             <div className="space-y-2 pt-1">
-              {onHighlightPathToRoot && selectedNode.node_type !== 'suspect' && (
+              {onHighlightPathToRoot && !isSuspect && (
                 <button
                   onClick={() => onHighlightPathToRoot(selectedNode.address)}
                   className="w-full py-2.5 px-3 rounded-lg bg-surface-100 hover:bg-surface-200 dark:bg-surface-200 dark:hover:bg-surface-300 text-surface-800 dark:text-surface-100 font-bold text-xs transition flex items-center justify-center gap-2 border border-surface-200 dark:border-surface-300 cursor-pointer shadow-xs"
@@ -352,7 +535,7 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
                 </button>
               )}
 
-              {(selectedNode.node_type === 'endpoint' || isCandidateNode) && onNavigateToReports && (
+              {(isEndpointNode || isCandidateNode) && onNavigateToReports && (
                 <button
                   onClick={onNavigateToReports}
                   className="w-full py-2.5 px-3 rounded-lg bg-brand-blue hover:bg-brand-hover text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
@@ -364,11 +547,11 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
 
               {onNavigateToEvidence && (
                 <button
-                  onClick={onNavigateToEvidence}
+                  onClick={() => onNavigateToEvidence()}
                   className="w-full py-2.5 px-3 rounded-lg bg-surface-50 hover:bg-surface-100 dark:bg-surface-200/40 dark:hover:bg-surface-200 text-surface-700 dark:text-surface-200 font-semibold text-xs transition flex items-center justify-center gap-2 border border-surface-200 dark:border-surface-300 cursor-pointer shadow-xs"
                 >
                   <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                  <span>Verify in Cryptographic Evidence Vault</span>
+                  <span>Inspect in Cryptographic Evidence Vault</span>
                 </button>
               )}
             </div>
@@ -404,8 +587,22 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
               <div className="text-[11px] text-surface-500 uppercase font-bold tracking-wider">Directional Route</div>
               <div className="space-y-2 font-mono text-xs">
                 <div>
-                  <span className="text-[10px] text-surface-500 uppercase font-bold tracking-wider block mb-1">Source (From)</span>
-                  <div className="text-surface-800 dark:text-surface-200 font-bold break-all p-2 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-surface-500 uppercase font-bold tracking-wider">Source (From)</span>
+                    {onSelectNodeByAddress && (
+                      <button
+                        onClick={() => onSelectNodeByAddress(selectedEdge.from_address)}
+                        className="text-[11px] text-brand-blue dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                      >
+                        Inspect Node &rarr;
+                      </button>
+                    )}
+                  </div>
+                  <div 
+                    onClick={() => onSelectNodeByAddress?.(selectedEdge.from_address)}
+                    className={`text-surface-800 dark:text-surface-200 font-bold break-all p-2 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 ${onSelectNodeByAddress ? 'cursor-pointer hover:border-brand-blue/50' : ''}`}
+                    title={onSelectNodeByAddress ? `Jump to source wallet node: ${selectedEdge.from_address}` : undefined}
+                  >
                     {selectedEdge.from_address}
                   </div>
                 </div>
@@ -413,8 +610,22 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
                   <ArrowRight className="h-4 w-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] text-surface-500 uppercase font-bold tracking-wider block mb-1">Destination (To)</span>
-                  <div className="text-surface-800 dark:text-surface-200 font-bold break-all p-2 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-surface-500 uppercase font-bold tracking-wider">Destination (To)</span>
+                    {onSelectNodeByAddress && (
+                      <button
+                        onClick={() => onSelectNodeByAddress(selectedEdge.to_address)}
+                        className="text-[11px] text-brand-blue dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                      >
+                        Inspect Node &rarr;
+                      </button>
+                    )}
+                  </div>
+                  <div 
+                    onClick={() => onSelectNodeByAddress?.(selectedEdge.to_address)}
+                    className={`text-surface-800 dark:text-surface-200 font-bold break-all p-2 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 ${onSelectNodeByAddress ? 'cursor-pointer hover:border-brand-blue/50' : ''}`}
+                    title={onSelectNodeByAddress ? `Jump to destination wallet node: ${selectedEdge.to_address}` : undefined}
+                  >
                     {selectedEdge.to_address}
                   </div>
                 </div>
@@ -478,6 +689,19 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
                 {new Date(selectedEdge.timestamp).toLocaleString()}
               </span>
             </div>
+
+            {/* Investigator Action for Edge */}
+            {onNavigateToEvidence && (
+              <div className="pt-1">
+                <button
+                  onClick={() => onNavigateToEvidence()}
+                  className="w-full py-2.5 px-3 rounded-lg bg-surface-50 hover:bg-surface-100 dark:bg-surface-200/40 dark:hover:bg-surface-200 text-surface-700 dark:text-surface-200 font-semibold text-xs transition flex items-center justify-center gap-2 border border-surface-200 dark:border-surface-300 cursor-pointer shadow-xs"
+                >
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                  <span>Inspect Transfer in Cryptographic Evidence Vault</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
