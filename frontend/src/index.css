@@ -3,14 +3,137 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
+  
+  --brand-blue: #1a4480;
+  --brand-hover: #133463;
+  --brand-light: #ebf2fb;
+  
+  --surface-default: #ffffff;
+  --surface-50: #f8f9fb;
+  --surface-100: #f1f4f7;
+  --surface-200: #e2e8f0;
+  --surface-300: #d5dbdf;
+  --surface-400: #adb3b7;
+  --surface-500: #767b7f;
+  --surface-600: #5a6064;
+  --surface-700: #485260;
+  --surface-800: #2d3337;
+  --surface-900: #0c0f10;
+}
+
+.dark {
   color-scheme: dark;
+  
+  --brand-blue: #60a5fa;
+  --brand-hover: #93c5fd;
+  --brand-light: #1e3a5f;
+  
+  --surface-default: #0f172a;
+  --surface-50: #0b1120;
+  --surface-100: #131c32;
+  --surface-200: #1e293b;
+  --surface-300: #334155;
+  --surface-400: #475569;
+  --surface-500: #64748b;
+  --surface-600: #94a3b8;
+  --surface-700: #cbd5e1;
+  --surface-800: #e2e8f0;
+  --surface-900: #f1f5f9;
 }
 
 body {
   margin: 0;
-  background-color: #0b101b;
-  color: #e2e8f0;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--surface-50);
+  color: var(--surface-800);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ── DARK MODE OVERRIDES for semantic colors that can't use CSS vars ── */
+
+/* Emerald / Green status indicators */
+.dark .bg-emerald-50 { background-color: #064e3b !important; }
+.dark .bg-emerald-100 { background-color: #065f46 !important; }
+.dark .border-emerald-100 { border-color: #065f46 !important; }
+.dark .border-emerald-200 { border-color: #047857 !important; }
+.dark .text-emerald-700 { color: #6ee7b7 !important; }
+.dark .text-emerald-600 { color: #6ee7b7 !important; }
+.dark .text-emerald-500 { color: #34d399 !important; }
+
+/* Red / Error indicators */
+.dark .bg-red-50 { background-color: #450a0a !important; }
+.dark .bg-red-100 { background-color: #7f1d1d !important; }
+.dark .border-red-200 { border-color: #991b1b !important; }
+.dark .text-red-800 { color: #fca5a5 !important; }
+.dark .text-red-700 { color: #fca5a5 !important; }
+.dark .text-red-600 { color: #f87171 !important; }
+.dark .text-red-500 { color: #f87171 !important; }
+
+/* Amber / Warning indicators */
+.dark .bg-amber-50 { background-color: #451a03 !important; }
+.dark .bg-amber-100 { background-color: #78350f !important; }
+.dark .border-amber-200 { border-color: #92400e !important; }
+.dark .text-amber-800 { color: #fcd34d !important; }
+.dark .text-amber-700 { color: #fcd34d !important; }
+.dark .text-amber-600 { color: #fbbf24 !important; }
+.dark .text-amber-500 { color: #f59e0b !important; }
+
+/* Yellow badges */
+.dark .bg-yellow-50 { background-color: #422006 !important; }
+.dark .bg-yellow-100 { background-color: #713f12 !important; }
+.dark .border-yellow-200 { border-color: #854d0e !important; }
+.dark .text-yellow-800 { color: #fde68a !important; }
+.dark .text-yellow-600 { color: #fbbf24 !important; }
+
+/* Blue accent (for remaining hardcoded blue-* that weren't caught) */
+.dark .bg-blue-50 { background-color: #1e3a8a !important; }
+.dark .bg-blue-100 { background-color: #1e40af !important; }
+.dark .border-blue-200 { border-color: #1d4ed8 !important; }
+.dark .text-blue-800 { color: #93c5fd !important; }
+.dark .text-blue-700 { color: #93c5fd !important; }
+.dark .text-blue-600 { color: #60a5fa !important; }
+
+/* Police palette (graph drawers — these are dark-only components,
+   keep them looking correct in both modes) */
+.dark .bg-police-900,
+.dark .bg-police-850,
+.dark .bg-police-800 { background-color: #0f172a !important; }
+.dark .bg-police-700 { background-color: #1e293b !important; }
+.dark .bg-police-600 { background-color: #334155 !important; }
+.dark .border-police-800,
+.dark .border-police-700 { border-color: #334155 !important; }
+.dark .border-police-600 { border-color: #475569 !important; }
+
+/* Table row hover */
+.dark .hover\:bg-surface-50:hover { background-color: var(--surface-100) !important; }
+
+/* Status badges - OPEN / DEMO REPLAY */
+.dark .bg-green-100 { background-color: #064e3b !important; }
+.dark .text-green-800 { color: #6ee7b7 !important; }
+.dark .border-green-200 { border-color: #047857 !important; }
+
+/* Purple accents */
+.dark .bg-purple-50 { background-color: #2e1065 !important; }
+.dark .bg-purple-100 { background-color: #3b0764 !important; }
+.dark .border-purple-200 { border-color: #581c87 !important; }
+.dark .text-purple-800 { color: #c4b5fd !important; }
+.dark .text-purple-700 { color: #c4b5fd !important; }
+.dark .text-purple-600 { color: #a78bfa !important; }
+
+/* Indigo accents */
+.dark .bg-indigo-50 { background-color: #1e1b4b !important; }
+.dark .bg-indigo-100 { background-color: #312e81 !important; }
+.dark .border-indigo-200 { border-color: #3730a3 !important; }
+.dark .text-indigo-800 { color: #a5b4fc !important; }
+.dark .text-indigo-700 { color: #a5b4fc !important; }
+
+/* Smooth transition for theme switching */
+*, *::before, *::after {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
