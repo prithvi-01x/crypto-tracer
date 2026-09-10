@@ -51,7 +51,6 @@ export default function App() {
   const handleCaseCreated = (newCaseId: string) => {
     loadCases();
     setSelectedCaseId(newCaseId);
-    setActiveTab('investigations');
   };
 
   return (
