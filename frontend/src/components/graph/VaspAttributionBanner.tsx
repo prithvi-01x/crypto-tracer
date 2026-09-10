@@ -1,18 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Building2, 
   AlertTriangle, 
   FileText, 
   CheckCircle2,
-  ListChecks
+  ListChecks,
+  Copy,
+  Check,
+  Network,
+  ShieldCheck,
+  ExternalLink,
+  Info
 } from 'lucide-react';
-import type { AttributionResponse } from '../../types/attribution';
+import type { AttributionResponse, AttributionCandidate } from '../../types/attribution';
 import type { CaseItem } from '../../types/case';
 
 interface VaspAttributionBannerProps {
   attribution: AttributionResponse | null;
   loading?: boolean;
   onNavigateToEvidence?: () => void;
+  onNavigateToGraph?: (address?: string) => void;
   onOpenReportModal?: () => void;
   executionMode?: 'DEMO' | 'LIVE' | string;
   caseData?: CaseItem | null;
@@ -21,214 +28,368 @@ interface VaspAttributionBannerProps {
 export const VaspAttributionBanner: React.FC<VaspAttributionBannerProps> = ({
   attribution,
   loading = false,
+  onNavigateToEvidence,
+  onNavigateToGraph,
   onOpenReportModal,
   executionMode = 'DEMO',
 }) => {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [selectedCandidateIndex, setSelectedCandidateIndex] = useState<number>(0);
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
   if (loading) {
     return (
-      <div className="p-12 text-center text-surface-500 text-lg">
-        Calculating multi-factor attribution heuristics...
+      <div className="p-12 text-center text-surface-500 text-sm flex flex-col items-center justify-center gap-3">
+        <div className="h-6 w-6 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
+        <span>Evaluating multi-factor attribution heuristics from on-chain telemetry...</span>
       </div>
     );
   }
 
-  const best = attribution?.best_candidate;
-  const vaspName = best?.vasp_name || best?.vasp || 'BINANCE';
-  const confidenceScore = best ? `${best.confidence_percentage.toFixed(1)}%` : '81.6%';
-  const confidenceBand = best?.confidence_band || 'HIGH';
-  const hypothesisLabel = best?.hypothesis_label || 'Investigative Hypothesis (Pending Officer Review)';
-  const candidateWallet = best?.candidate_address || 'TBinanceUserDepositCandidate333333';
-  const destinationCluster = `${vaspName} TRON Hot Wallet / Consolidation Aggregator (TK7T...3NHq)`;
+  const candidates = attribution?.candidates || [];
+  const primaryCandidate: AttributionCandidate | null = 
+    candidates[selectedCandidateIndex] || attribution?.best_candidate || candidates[0] || null;
+
+  if (!attribution || !primaryCandidate) {
+    return (
+      <div className="rounded-xl border border-surface-200 dark:border-surface-300 bg-surface-default dark:bg-surface-100 p-8 text-center shadow-xs">
+        <div className="mx-auto w-12 h-12 rounded-full bg-surface-100 dark:bg-surface-200 flex items-center justify-center text-surface-400 dark:text-surface-500 mb-3">
+          <Building2 className="h-6 w-6" />
+        </div>
+        <h3 className="text-base font-bold text-surface-800 dark:text-surface-100 mb-1">
+          Attribution Finding: No Attributed VASP Candidate Identified
+        </h3>
+        <p className="text-xs sm:text-sm text-surface-500 max-w-lg mx-auto mb-4">
+          The forensic attribution engine has not identified any clustered exchange deposit addresses or tagged entities meeting the attribution threshold for this trace.
+        </p>
+        {onNavigateToGraph && (
+          <button
+            onClick={() => onNavigateToGraph()}
+            className="px-4 py-2 rounded-lg bg-brand-blue hover:bg-brand-hover text-white text-xs font-bold transition shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+          >
+            <Network className="h-3.5 w-3.5" />
+            <span>Inspect Trace Graph</span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const best = primaryCandidate;
+  const vaspName = best.vasp_name || best.vasp || 'UNSPECIFIED VASP';
+  const confidenceScore = `${best.confidence_percentage.toFixed(1)}%`;
+  const confidenceBand = best.confidence_band || 'HIGH';
+  const hypothesisLabel = best.hypothesis_label || 'Investigative Hypothesis (Pending Officer Review)';
+  const candidateWallet = best.candidate_address;
 
   // Dynamic factor calculations matching backend AttributionEngine
-  const fDirect = best?.factors?.direct_tag ?? 0.0;
-  const fDownstream = best?.factors?.downstream_vasp_match ?? 1.0;
+  const fDirect = best.factors?.direct_tag ?? 0.0;
+  const fDownstream = best.factors?.downstream_vasp_match ?? 0.0;
   const fEffectiveTag = fDirect > 0 ? fDirect : 0.80 * fDownstream;
-  const fSweep = best?.factors?.sweep ?? 1.0;
-  const fFanIn = best?.factors?.fan_in ?? 0.30;
-  const fTemporal = best?.factors?.temporal ?? 0.9432;
+  const fSweep = best.factors?.sweep ?? 0.0;
+  const fFanIn = best.factors?.fan_in ?? 0.0;
+  const fTemporal = best.factors?.temporal ?? 0.0;
 
   const wEffectiveTag = (fEffectiveTag * 0.35).toFixed(3);
   const wSweep = (fSweep * 0.35).toFixed(3);
   const wFanIn = (fFanIn * 0.15).toFixed(3);
   const wTemporal = (fTemporal * 0.15).toFixed(3);
-  const totalScoreVal = best?.confidence ?? (Number(wEffectiveTag) + Number(wSweep) + Number(wFanIn) + Number(wTemporal));
-  const totalScorePercentage = best?.confidence_percentage ? best.confidence_percentage.toFixed(1) : (totalScoreVal * 100).toFixed(1);
+  const totalScoreVal = best.confidence ?? (Number(wEffectiveTag) + Number(wSweep) + Number(wFanIn) + Number(wTemporal));
+  const totalScorePercentage = best.confidence_percentage ? best.confidence_percentage.toFixed(1) : (totalScoreVal * 100).toFixed(1);
 
-  const bulletPoints = (best?.evidence_bullet_points && best.evidence_bullet_points.length > 0)
-    ? best.evidence_bullet_points
-    : [
-        `Downstream VASP Match — Direct sweep to identified ${vaspName} hot wallet cluster.`,
-        'Sweep Consolidation — 99.8% of received funds swept within single scheduled batch.',
-        'Fan-In Aggregation — Feeder deposit addresses feeding identical sweep aggregation target.',
-        'Temporal Sweep Cadence — Programmatic deposit-to-sweep delay consistent with exchange daemon batching schedules.'
-      ];
+  const bulletPoints = best.evidence_bullet_points || [];
 
-  const disclaimerText = attribution?.disclaimer || 
+  const disclaimerText = attribution.disclaimer || 
     "This candidate wallet is not directly tagged. Attribution is inferred from downstream matching and behavioral factors. Requires human investigator review. Not an autonomous freeze.";
 
   return (
-    <div className="flex flex-col md:flex-row gap-6">
-      
-      {/* Left Column: Finding & Evidence */}
-      <div className="w-full md:w-[60%] space-y-6">
-        {/* Main Card */}
-        <div className="bg-surface-default border border-surface-200 rounded p-6 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-blue" />
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded border border-surface-200 bg-surface-50 flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-brand-blue" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-surface-800 uppercase">Attribution Finding: {vaspName}</h2>
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-base font-bold flex items-center gap-1">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {confidenceScore} ({confidenceBand} Confidence)
-                  </span>
-                  <span className="text-base text-surface-500 font-medium">{hypothesisLabel}</span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-mono font-bold border ${
-                    executionMode === 'LIVE'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                      : 'bg-amber-50 text-amber-700 border-amber-300'
-                  }`}>
-                    {executionMode === 'LIVE' ? 'LIVE ON-CHAIN RPC' : 'DEMO REPLAY FIXTURE'}
-                  </span>
+    <div className="space-y-6">
+      {/* Candidate Selector Tab if multiple candidates exist */}
+      {candidates.length > 1 && (
+        <div className="flex items-center gap-2 pb-2 border-b border-surface-200 dark:border-surface-300 overflow-x-auto">
+          <span className="text-xs font-bold text-surface-500 uppercase tracking-wider shrink-0">
+            Attribution Candidates ({candidates.length}):
+          </span>
+          {candidates.map((c, idx) => (
+            <button
+              key={c.candidate_address || idx}
+              onClick={() => setSelectedCandidateIndex(idx)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                selectedCandidateIndex === idx
+                  ? 'bg-brand-blue text-white shadow-xs font-bold'
+                  : 'bg-surface-100 hover:bg-surface-200 dark:bg-surface-200 dark:hover:bg-surface-300 text-surface-700 dark:text-surface-200 border border-surface-200 dark:border-surface-300'
+              }`}
+            >
+              <span>{c.vasp_name || c.vasp}</span>
+              <span className="font-mono text-[11px] opacity-85">({c.confidence_percentage.toFixed(0)}%)</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Column: Finding & Evidence */}
+        <div className="w-full lg:w-[60%] space-y-5">
+          {/* Main Finding Card */}
+          <div className="bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 rounded-xl p-5 shadow-xs relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-blue" />
+            
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-lg border border-surface-200 dark:border-surface-300 bg-surface-50 dark:bg-surface-200 flex items-center justify-center shrink-0">
+                  <Building2 className="h-6 w-6 text-brand-blue dark:text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold text-surface-800 dark:text-surface-100 uppercase tracking-tight">
+                    Attribution Finding: {vaspName}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      {confidenceScore} ({confidenceBand} Confidence)
+                    </span>
+                    <span className="text-xs text-surface-500 dark:text-surface-400 font-medium">
+                      {hypothesisLabel}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${
+                      executionMode === 'LIVE'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                    }`}>
+                      {executionMode === 'LIVE' ? 'LIVE ON-CHAIN RPC' : 'DEMO REPLAY FIXTURE'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-surface-200 pt-4">
-               <div>
-                  <span className="text-sm uppercase font-bold text-surface-500 mb-1 block">Target Candidate Wallet Address</span>
-                  <div className="font-mono text-base bg-surface-50 border border-surface-200 rounded p-2 text-surface-800 break-all select-all">
-                    {candidateWallet}
-                  </div>
-               </div>
-               <div>
-                  <span className="text-sm uppercase font-bold text-surface-500 mb-1 block">Identified Destination Cluster</span>
-                  <div className="font-mono text-base bg-surface-50 border border-surface-200 rounded p-2 text-surface-800 break-all select-all">
-                    {destinationCluster}
-                  </div>
-               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Mandatory Statutory Disclaimer */}
-        <div className="bg-amber-50 border border-amber-200 rounded p-4 flex gap-3 shadow-sm">
-          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-lg font-medium text-amber-800 leading-relaxed">
-            {disclaimerText}
-          </p>
-        </div>
-
-        {/* Forensic Evidence Observations */}
-        <div className="bg-surface-default border border-surface-200 rounded p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-surface-800 mb-4 flex items-center gap-2">
-            <ListChecks className="h-4 w-4 text-brand-blue" />
-            Forensic Evidence Observations
-          </h3>
-          <div className="space-y-4 text-lg text-surface-700">
-            {bulletPoints.map((point, idx) => (
-              <div key={idx} className="flex gap-3 items-start border-b border-surface-100 last:border-0 pb-3 last:pb-0">
-                <span className="px-2 py-0.5 rounded bg-surface-100 text-surface-600 font-bold text-sm uppercase mt-0.5 shrink-0">
-                  Signal {idx + 1}
+            
+            {/* Candidate Target Wallet & Actions */}
+            <div className="border-t border-surface-200 dark:border-surface-300 pt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs uppercase font-bold text-surface-500 tracking-wider">
+                  Target Candidate Wallet Address
                 </span>
-                <p className="leading-relaxed">{point.replace(/^✓\s*/, '').replace(/^•\s*/, '')}</p>
+                {onNavigateToGraph && (
+                  <button
+                    onClick={() => onNavigateToGraph(candidateWallet)}
+                    className="text-xs text-brand-blue dark:text-blue-400 hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Network className="h-3.5 w-3.5" />
+                    <span>Inspect on Graph &rarr;</span>
+                  </button>
+                )}
               </div>
-            ))}
+
+              <div className="p-2.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 flex items-center justify-between gap-2">
+                <span className="font-mono text-xs sm:text-[13px] font-bold text-surface-800 dark:text-surface-100 break-all select-all">
+                  {candidateWallet}
+                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => copyToClipboard(candidateWallet, 'candidate-wallet')}
+                    className="p-1.5 rounded hover:bg-surface-200 dark:hover:bg-surface-300 text-surface-500 transition cursor-pointer"
+                    title="Copy Address"
+                  >
+                    {copiedKey === 'candidate-wallet' ? (
+                      <Check className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                  <a
+                    href={`https://tronscan.org/#/address/${candidateWallet}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-1.5 rounded hover:bg-surface-200 dark:hover:bg-surface-300 text-surface-500 transition"
+                    title="View on TronScan"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                <div className="p-2 rounded bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300">
+                  <span className="text-[10px] text-surface-500 uppercase block font-medium">Clustered VASP ID</span>
+                  <span className="font-mono font-bold text-surface-800 dark:text-surface-200">
+                    {best.vasp_id || best.vasp}
+                  </span>
+                </div>
+                <div className="p-2 rounded bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300">
+                  <span className="text-[10px] text-surface-500 uppercase block font-medium">Verification Status</span>
+                  <span className="font-mono font-bold text-surface-800 dark:text-surface-200">
+                    {best.verification_status || 'HEURISTIC'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Statutory Disclaimer */}
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl p-4 flex gap-3 shadow-xs">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed font-normal">
+              <span className="font-bold block mb-0.5">Section 63 BSA & Statutory Intelligence Disclaimer:</span>
+              {disclaimerText}
+            </div>
+          </div>
+
+          {/* Forensic Evidence Observations */}
+          <div className="bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 rounded-xl p-5 shadow-xs space-y-3">
+            <h3 className="text-sm font-bold text-surface-800 dark:text-surface-100 uppercase tracking-wider flex items-center gap-2">
+              <ListChecks className="h-4 w-4 text-brand-blue dark:text-blue-400" />
+              <span>Forensic Evidence Observations ({bulletPoints.length})</span>
+            </h3>
+            {bulletPoints.length > 0 ? (
+              <div className="space-y-2.5">
+                {bulletPoints.map((point, idx) => (
+                  <div key={idx} className="flex gap-2.5 items-start p-2.5 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300 text-xs">
+                    <span className="px-1.5 py-0.5 rounded bg-surface-200 dark:bg-surface-300 text-surface-700 dark:text-surface-200 font-bold text-[10px] uppercase shrink-0">
+                      SIG {idx + 1}
+                    </span>
+                    <p className="text-surface-700 dark:text-surface-200 leading-relaxed font-normal">
+                      {point.replace(/^[✓•\s]+/, '')}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-surface-500 italic">
+                No explicit evidence observation bullets returned for this candidate.
+              </p>
+            )}
+          </div>
+
+          {/* Action Bar */}
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            {onNavigateToGraph && (
+              <button 
+                onClick={() => onNavigateToGraph(candidateWallet)} 
+                className="px-3.5 py-2 rounded-lg bg-surface-100 hover:bg-surface-200 dark:bg-surface-200 dark:hover:bg-surface-300 text-surface-800 dark:text-surface-100 text-xs font-bold transition border border-surface-200 dark:border-surface-300 flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Network className="h-3.5 w-3.5 text-brand-blue dark:text-blue-400" />
+                <span>View on Graph</span>
+              </button>
+            )}
+
+            {onNavigateToEvidence && (
+              <button 
+                onClick={onNavigateToEvidence}
+                className="px-3.5 py-2 rounded-lg bg-surface-100 hover:bg-surface-200 dark:bg-surface-200 dark:hover:bg-surface-300 text-surface-800 dark:text-surface-100 text-xs font-bold transition border border-surface-200 dark:border-surface-300 flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                <span>Evidence Vault</span>
+              </button>
+            )}
+
+            {onOpenReportModal && (
+              <button 
+                onClick={onOpenReportModal} 
+                className="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue hover:bg-brand-hover text-white text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>Draft Section 94 Production Notice</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Action Bar */}
-        <div className="flex items-center gap-3">
-          <button onClick={onOpenReportModal} className="px-4 py-2 rounded bg-brand-blue hover:bg-brand-hover text-white text-lg font-bold transition shadow-sm">
-            Accept Attribution Finding
-          </button>
-          <button className="px-4 py-2 rounded border border-surface-300 bg-surface-default hover:bg-surface-50 text-surface-800 text-lg font-semibold transition">
-            Flag for Additional Review
-          </button>
-          <button onClick={onOpenReportModal} className="ml-auto flex items-center gap-2 px-4 py-2 rounded border border-brand-blue bg-brand-light text-brand-blue hover:bg-brand-blue hover:text-white text-lg font-semibold transition">
-            <FileText className="h-4 w-4" /> Draft Section 94 Production Notice
-          </button>
+        {/* Right Column: Scoring Breakdown & Factor Explanations */}
+        <div className="w-full lg:w-[40%] space-y-5">
+          {/* Scoring Breakdown Card */}
+          <div className="bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 rounded-xl p-5 shadow-xs space-y-4">
+            <h3 className="text-sm font-bold text-surface-800 dark:text-surface-100 uppercase tracking-wider">
+              Confidence Scoring Breakdown
+            </h3>
+            
+            <div className="bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 rounded-lg p-2.5 font-mono text-[11px] text-surface-600 dark:text-surface-300 overflow-x-auto space-y-1">
+              <div>CS = 0.35 × tag + 0.35 × sweep + 0.15 × fan_in + 0.15 × temporal</div>
+              <div className="text-surface-400 dark:text-surface-500">tag = direct_tag ? direct_tag : 0.80 × downstream</div>
+            </div>
+
+            <div className="space-y-2.5 font-mono text-xs text-surface-700 dark:text-surface-200">
+              <div className="flex justify-between items-center py-1 border-b border-surface-100 dark:border-surface-200">
+                <span className="text-surface-500">Downstream &rarr; Tag ({fEffectiveTag.toFixed(2)})</span>
+                <span className="font-bold text-surface-800 dark:text-surface-100">{fEffectiveTag.toFixed(2)} × 0.35 = +{wEffectiveTag}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-surface-100 dark:border-surface-200">
+                <span className="text-surface-500">Sweep Consolidation ({fSweep.toFixed(2)})</span>
+                <span className="font-bold text-surface-800 dark:text-surface-100">{fSweep.toFixed(2)} × 0.35 = +{wSweep}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-surface-100 dark:border-surface-200">
+                <span className="text-surface-500">Fan-In Aggregation ({fFanIn.toFixed(2)})</span>
+                <span className="font-bold text-surface-800 dark:text-surface-100">{fFanIn.toFixed(2)} × 0.15 = +{wFanIn}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-surface-100 dark:border-surface-200">
+                <span className="text-surface-500">Temporal Cadence ({fTemporal.toFixed(2)})</span>
+                <span className="font-bold text-surface-800 dark:text-surface-100">{fTemporal.toFixed(2)} × 0.15 = +{wTemporal}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 font-bold text-brand-blue dark:text-blue-400 text-sm">
+                <span>TOTAL CONFIDENCE</span>
+                <span>= {totalScoreVal.toFixed(4)} ({totalScorePercentage}%)</span>
+              </div>
+            </div>
+
+            <div className="h-2 bg-surface-200 dark:bg-surface-300 rounded-full overflow-hidden">
+               <div 
+                 className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                 style={{ width: `${Math.min(100, Math.max(0, parseFloat(totalScorePercentage)))}%` }} 
+               />
+            </div>
+          </div>
+
+          {/* Factor Explanations Card */}
+          <div className="bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 rounded-xl p-5 shadow-xs space-y-3">
+            <h3 className="text-sm font-bold text-surface-800 dark:text-surface-100 uppercase tracking-wider flex items-center gap-1.5">
+              <Info className="h-4 w-4 text-brand-blue dark:text-blue-400" />
+              <span>Factor Explanations</span>
+            </h3>
+            
+            <div className="space-y-2.5 text-xs">
+              {best.explanations?.downstream_vasp_match && (
+                <div className="p-2.5 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300">
+                  <span className="text-[10px] text-surface-500 uppercase font-bold block mb-1">Downstream VASP Match</span>
+                  <p className="text-surface-700 dark:text-surface-200 leading-relaxed font-normal">
+                    {best.explanations.downstream_vasp_match}
+                  </p>
+                </div>
+              )}
+
+              {best.explanations?.sweep && (
+                <div className="p-2.5 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300">
+                  <span className="text-[10px] text-surface-500 uppercase font-bold block mb-1">Sweep Consolidation Behavior</span>
+                  <p className="text-surface-700 dark:text-surface-200 leading-relaxed font-normal">
+                    {best.explanations.sweep}
+                  </p>
+                </div>
+              )}
+
+              {best.explanations?.fan_in && (
+                <div className="p-2.5 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300">
+                  <span className="text-[10px] text-surface-500 uppercase font-bold block mb-1">Fan-In Topology</span>
+                  <p className="text-surface-700 dark:text-surface-200 leading-relaxed font-normal">
+                    {best.explanations.fan_in}
+                  </p>
+                </div>
+              )}
+
+              {best.explanations?.temporal && (
+                <div className="p-2.5 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300">
+                  <span className="text-[10px] text-surface-500 uppercase font-bold block mb-1">Temporal Sweep Cadence</span>
+                  <p className="text-surface-700 dark:text-surface-200 leading-relaxed font-normal">
+                    {best.explanations.temporal}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Right Column: Scoring Breakdown & Metadata */}
-      <div className="w-full md:w-[40%] space-y-6">
-        
-        {/* Scoring Breakdown Card */}
-        <div className="bg-surface-default border border-surface-200 rounded p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-surface-800 mb-4">Confidence Scoring Breakdown</h3>
-          
-          <div className="bg-surface-50 border border-surface-200 rounded p-3 font-mono text-base text-surface-700 mb-4 overflow-x-auto">
-            <div>CS = 0.35 × effective_tag + 0.35 × sweep + 0.15 × fan_in + 0.15 × temporal</div>
-            <div className="mt-1 text-surface-500">effective_tag = direct_tag ? direct_tag : 0.80 × downstream</div>
-          </div>
-
-          <div className="space-y-3 font-mono text-base text-surface-700">
-            <div className="flex justify-between items-center py-1">
-              <span>Downstream ({fDownstream.toFixed(2)}) &rarr; Tag ({fEffectiveTag.toFixed(2)})</span>
-              <span className="font-bold">{fEffectiveTag.toFixed(2)} × 0.35 = +{wEffectiveTag}</span>
-            </div>
-            <div className="flex justify-between items-center py-1">
-              <span>Sweep Consolidation ({fSweep.toFixed(3)})</span>
-              <span className="font-bold">{fSweep.toFixed(3)} × 0.35 = +{wSweep}</span>
-            </div>
-            <div className="flex justify-between items-center py-1">
-              <span>Fan-In Signal ({fFanIn.toFixed(2)})</span>
-              <span className="font-bold">{fFanIn.toFixed(2)} × 0.15 = +{wFanIn}</span>
-            </div>
-            <div className="flex justify-between items-center py-1 border-b border-surface-200 pb-3">
-              <span>Temporal Signal ({fTemporal.toFixed(2)})</span>
-              <span className="font-bold">{fTemporal.toFixed(2)} × 0.15 = +{wTemporal}</span>
-            </div>
-            <div className="flex justify-between items-center pt-2 font-bold text-brand-blue text-lg">
-              <span>TOTAL CONFIDENCE</span>
-              <span>= {totalScoreVal.toFixed(4)} ({totalScorePercentage}%)</span>
-            </div>
-          </div>
-
-          <div className="mt-6 h-2 bg-surface-200 rounded-full overflow-hidden">
-             <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, Math.max(0, parseFloat(totalScorePercentage)))}%` }} />
-          </div>
-        </div>
-
-        {/* Attribution Lineage Card */}
-        <div className="bg-surface-default border border-surface-200 rounded p-6 shadow-sm">
-           <h3 className="text-lg font-bold text-surface-800 mb-4">Attribution Lineage & Metadata</h3>
-           
-           <div className="space-y-4 text-lg text-surface-700">
-             <div>
-               <span className="text-sm uppercase font-bold text-surface-500 block mb-1">Ingress Path</span>
-               <div className="font-mono text-base leading-relaxed break-all">
-                 TSuspect...111 &rarr; TLayering...111 &rarr; {candidateWallet.substring(0, 10)}... &rarr; {vaspName} Hot Wallet
-               </div>
-             </div>
-             
-             <div className="grid grid-cols-2 gap-4">
-                <div>
-                   <span className="text-sm uppercase font-bold text-surface-500 block mb-1">Inflow Amount</span>
-                   <span className="font-mono text-surface-800 font-medium">60,000 USDT</span>
-                </div>
-                <div>
-                   <span className="text-sm uppercase font-bold text-surface-500 block mb-1">Swept Amount</span>
-                   <span className="font-mono text-surface-800 font-medium">59,800 USDT</span>
-                </div>
-             </div>
-
-             <div className="pt-3 border-t border-surface-100">
-               <span className="text-sm uppercase font-bold text-surface-500 block mb-1">Fee Retained Across Hops</span>
-               <span className="font-mono text-base text-surface-600">200 USDT</span>
-             </div>
-           </div>
-        </div>
-      </div>
-
     </div>
   );
 };
