@@ -158,7 +158,9 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
               <span className="font-mono text-surface-500 bg-surface-100 px-2 py-0.5 rounded text-[11px] border border-surface-200">
                 Case {caseData.id.substring(caseData.id.length - 5)}
               </span>
-              <span className="font-mono font-bold text-brand-blue dark:text-blue-400">{caseData.fir_number}</span>
+              <span className="font-mono font-bold text-brand-blue dark:text-blue-400">
+                {caseData.fir_number.toUpperCase().includes('FIR') ? caseData.fir_number : `FIR ${caseData.fir_number}`}
+              </span>
             </div>
             
             <div className="w-px h-3.5 bg-surface-200 shrink-0" />
