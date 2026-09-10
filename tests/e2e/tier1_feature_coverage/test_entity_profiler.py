@@ -82,8 +82,8 @@ async def test_entity_drawer_financial_volume_metrics(case_page: Page):
     sent_metric = page.locator("text=Total Sent Out")
     assert await sent_metric.count() > 0, "Total Sent Out metric header should be present"
 
-    tx_count = page.locator("text=Observed Transactions:")
-    assert await tx_count.count() > 0, "Observed Transactions counter should be present"
+    tx_count = page.locator("text=Observed Transfers")
+    assert await tx_count.count() > 0, "Observed Transfers counter should be present"
 
 
 @pytest.mark.asyncio
