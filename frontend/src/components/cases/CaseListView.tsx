@@ -88,7 +88,7 @@ export const CaseListView: React.FC<CaseListViewProps> = ({
   });
 
   return (
-    <div className="space-y-6 max-w-[1440px] mx-auto p-4 sm:p-6 transition-colors">
+    <div className="space-y-6 w-full max-w-[96vw] 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 py-4 transition-colors">
       {/* Reactor Hero & Command Banner */}
       <div className="p-6 rounded-xl bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 shadow-sm relative overflow-hidden">
         {/* Subtle accent bar */}

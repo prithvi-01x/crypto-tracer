@@ -232,8 +232,8 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   return (
     <div className="min-h-screen bg-surface-50 flex flex-col transition-colors">
       {/* Reactor Command Header */}
-      <div className="bg-surface-default border-b border-surface-200 px-6 py-2.5 sticky top-[61px] z-30 shadow-xs transition-colors">
-        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="bg-surface-default border-b border-surface-200 px-4 sm:px-6 py-2 sticky top-[53px] z-30 shadow-xs transition-colors">
+        <div className="w-full max-w-[96vw] 2xl:max-w-[1920px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Left Metadata Strip */}
           <div className="flex items-center gap-3 text-xs w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
             <button 
@@ -345,15 +345,15 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
       </div>
 
       {/* Reactor Subnav Tabs with Safety Orange Active Indicator */}
-      <div className="bg-surface-default border-b border-surface-200 px-6 transition-colors">
-        <div className="max-w-[1440px] mx-auto flex items-center gap-6 overflow-x-auto">
+      <div className="bg-surface-default border-b border-surface-200 px-4 sm:px-6 transition-colors">
+        <div className="w-full max-w-[96vw] 2xl:max-w-[1920px] mx-auto flex items-center gap-6 overflow-x-auto">
           {(['graph', 'attribution', 'findings', 'evidence', 'reports'] as const).map(tab => {
             const isActive = activeTab === tab;
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 relative cursor-pointer ${
+                className={`py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all flex items-center gap-2 relative cursor-pointer ${
                   isActive 
                     ? 'border-reactor-orange text-reactor-orange font-bold' 
                     : 'border-transparent text-surface-500 hover:text-surface-800 dark:hover:text-surface-200'
@@ -405,9 +405,9 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
       </div>
 
       {/* Tab Content Area */}
-      <div className="flex-1 w-full max-w-[1440px] mx-auto p-4 sm:p-6 overflow-hidden flex flex-col">
+      <div className="flex-1 w-full max-w-[96vw] 2xl:max-w-[1920px] mx-auto px-3 sm:px-5 py-2 sm:py-2.5 overflow-hidden flex flex-col">
         {activeTab === 'graph' && (
-          <div className="flex-1 flex flex-col gap-3 h-[calc(100vh-200px)] overflow-hidden">
+          <div className="flex-1 flex flex-col gap-2.5 h-[calc(100vh-148px)] overflow-hidden">
             {/* Reactor Trace Stats Strip */}
             {graph?.meta && (
               <TraceStatsBar
@@ -420,7 +420,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
             {/* Main Graph Split Screen */}
             <div className="flex-1 flex flex-col lg:flex-row gap-3 min-h-0 overflow-hidden">
               {/* Graph Canvas Container */}
-              <div className="w-full lg:w-[68%] h-[55%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col overflow-hidden shadow-xs">
+              <div className="w-full lg:w-[67%] xl:w-[68%] h-[55%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col overflow-hidden shadow-xs">
                 <div className="px-3.5 py-2.5 border-b border-surface-200 flex justify-between items-center bg-surface-50">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <h3 className="font-semibold text-sm text-surface-800 dark:text-surface-100">
@@ -476,7 +476,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                   </div>
                 </div>
 
-                <div className="flex-1 relative bg-surface-50 overflow-y-auto p-4 flex items-center justify-center min-h-[460px]">
+                <div className={`flex-1 relative bg-surface-50 ${graph ? 'p-0 overflow-hidden' : 'p-4 overflow-y-auto flex items-center justify-center'}`}>
                   {graph ? (
                     <InvestigationGraphCanvas 
                       graph={graph} 
@@ -706,7 +706,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
               </div>
 
               {/* Right Panel: Reactor Entity Profiler or Forensic Alerts Drawer */}
-              <div className="w-full lg:w-[32%] h-[45%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col shadow-xs overflow-hidden">
+              <div className="w-full lg:w-[33%] xl:w-[32%] h-[45%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col shadow-xs overflow-hidden">
                 {showFindingsDrawer ? (
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="p-3 border-b border-surface-200 bg-surface-50 flex items-center justify-between">
@@ -796,7 +796,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
       </div>
       
       {/* Footer */}
-      <footer className="border-t border-surface-200 bg-surface-default py-2.5 px-6 text-xs text-surface-500 font-medium flex items-center justify-between transition-colors">
+      <footer className="border-t border-surface-200 bg-surface-default py-1.5 px-4 sm:px-6 text-[11px] text-surface-500 font-medium flex items-center justify-between transition-colors">
         <span>Crypto-Tracer &bull; Enterprise Blockchain Forensic Intelligence Platform</span>
         <span>Cryptographic Audit Trail: Active &bull; Section 63 BSA Certified</span>
       </footer>

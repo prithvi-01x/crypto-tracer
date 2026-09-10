@@ -93,8 +93,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-surface-50 text-surface-800 flex flex-col font-sans transition-colors">
       {/* Reactor Top Command Header */}
-      <header className="border-b border-surface-200 dark:border-surface-300 bg-surface-default dark:bg-surface-100 px-6 py-2.5 sticky top-0 z-40 shadow-xs transition-colors">
-        <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-4">
+      <header className="border-b border-surface-200 dark:border-surface-300 bg-surface-default dark:bg-surface-100 px-4 sm:px-6 py-2 sticky top-0 z-40 shadow-xs transition-colors">
+        <div className="w-full max-w-[96vw] 2xl:max-w-[1920px] mx-auto flex items-center justify-between gap-4">
           
           {/* Brand Logo & Reactor Edition */}
           <div 
@@ -270,7 +270,7 @@ export default function App() {
       <main className="flex-1 w-full mx-auto">
         {/* Error Alert */}
         {error && (
-          <div className="max-w-[1440px] mx-auto p-4 m-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 flex items-start gap-3">
+          <div className="w-full max-w-[96vw] 2xl:max-w-[1920px] mx-auto p-4 m-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-semibold text-sm">System Alert</h3>

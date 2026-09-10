@@ -66,33 +66,33 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
   // Generate theme-appropriate Cytoscape stylesheet
   const getCytoscapeStyles = useCallback((dark: boolean): cytoscape.StylesheetStyle[] => {
     if (dark) {
-      // Reactor Cyber Dark
+      // Reactor Cyber Dark - Presentation Scaled
       return [
         {
           selector: 'node',
           style: {
             'label': 'data(label)',
             'color': '#f8fafc',
-            'font-size': '10px',
+            'font-size': '11px',
             'font-family': 'JetBrains Mono, monospace',
             'font-weight': 'bold',
             'text-wrap': 'wrap',
             'text-valign': 'bottom',
-            'text-margin-y': 7,
+            'text-margin-y': 8,
             'text-background-color': '#040507',
-            'text-background-opacity': 0.9,
-            'text-background-padding': '3px',
+            'text-background-opacity': 0.92,
+            'text-background-padding': '4px 6px',
             'text-background-shape': 'roundrectangle',
             'text-border-width': 1,
             'text-border-color': '#293972',
             'text-border-opacity': 0.8,
             'transition-property': 'background-color, line-color, target-arrow-color, opacity, width, height, border-color, border-width',
             'transition-duration': 0.2,
-            'border-width': 2.5,
+            'border-width': 3,
             'background-color': '#122149',
             'border-color': '#293972',
-            'width': 38,
-            'height': 38,
+            'width': 52,
+            'height': 52,
           },
         },
         {
@@ -100,11 +100,13 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'background-color': '#450a0a',
             'border-color': '#ef4444',
-            'border-width': 3.5,
-            'width': 46,
-            'height': 46,
+            'border-width': 4,
+            'width': 64,
+            'height': 64,
             'color': '#fca5a5',
+            'font-size': '12px',
             'text-border-color': '#7f1d1d',
+            'text-margin-y': 9,
           },
         },
         {
@@ -112,11 +114,13 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'background-color': '#122149',
             'border-color': '#38bdf8',
-            'border-width': 2.5,
-            'width': 38,
-            'height': 38,
+            'border-width': 3,
+            'width': 52,
+            'height': 52,
             'color': '#93c5fd',
+            'font-size': '11px',
             'text-border-color': '#1e293b',
+            'text-margin-y': 8,
           },
         },
         {
@@ -124,11 +128,13 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'background-color': '#064e3b',
             'border-color': '#27FFBE',
-            'border-width': 3.5,
-            'width': 44,
-            'height': 44,
+            'border-width': 4,
+            'width': 60,
+            'height': 60,
             'color': '#27FFBE',
+            'font-size': '12px',
             'text-border-color': '#065f46',
+            'text-margin-y': 9,
           },
         },
         {
@@ -136,23 +142,23 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'curve-style': 'bezier',
             'target-arrow-shape': 'triangle',
-            'target-arrow-color': '#475569',
-            'line-color': '#334155',
-            'width': 2.5,
-            'arrow-scale': 1.2,
+            'target-arrow-color': '#64748b',
+            'line-color': '#3b4b66',
+            'width': 3.5,
+            'arrow-scale': 1.35,
             'label': 'data(label)',
-            'font-size': '10px',
+            'font-size': '11px',
             'font-family': 'JetBrains Mono, monospace',
             'font-weight': 'bold',
             'color': '#38bdf8',
             'text-background-color': '#040507',
-            'text-background-opacity': 0.9,
-            'text-background-padding': '3px',
+            'text-background-opacity': 0.92,
+            'text-background-padding': '3px 6px',
             'text-background-shape': 'roundrectangle',
             'text-border-width': 1,
             'text-border-color': '#1e293b',
             'text-rotation': 'autorotate',
-            'text-margin-y': -8,
+            'text-margin-y': -9,
             'transition-property': 'line-color, target-arrow-color, opacity, width',
             'transition-duration': 0.2,
           },
@@ -161,7 +167,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           selector: 'node:selected',
           style: {
             'border-color': '#FF5300',
-            'border-width': 4,
+            'border-width': 5,
             'background-color': '#122149',
           },
         },
@@ -170,14 +176,14 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'line-color': '#FF5300',
             'target-arrow-color': '#FF5300',
-            'width': 4.5,
+            'width': 5.5,
           },
         },
         {
           selector: 'node.highlighted',
           style: {
             'border-color': '#27FFBE',
-            'border-width': 4,
+            'border-width': 5,
             'opacity': 1.0,
             'z-index': 999,
           },
@@ -187,7 +193,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'line-color': '#27FFBE',
             'target-arrow-color': '#27FFBE',
-            'width': 4,
+            'width': 5,
             'opacity': 1.0,
             'z-index': 999,
             'color': '#27FFBE',
@@ -202,32 +208,32 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
         },
       ];
     } else {
-      // Reactor Clean Light
+      // Reactor Clean Light - Presentation Scaled
       return [
         {
           selector: 'node',
           style: {
             'label': 'data(label)',
             'color': '#122149',
-            'font-size': '10px',
+            'font-size': '11px',
             'font-family': 'JetBrains Mono, monospace',
             'font-weight': 'bold',
             'text-wrap': 'wrap',
             'text-valign': 'bottom',
-            'text-margin-y': 7,
+            'text-margin-y': 8,
             'text-background-color': '#ffffff',
             'text-background-opacity': 0.95,
-            'text-background-padding': '3px',
+            'text-background-padding': '4px 6px',
             'text-background-shape': 'roundrectangle',
             'text-border-width': 1,
             'text-border-color': '#d1d3e0',
             'transition-property': 'background-color, line-color, target-arrow-color, opacity, width, height, border-color, border-width',
             'transition-duration': 0.2,
-            'border-width': 2.5,
+            'border-width': 3,
             'background-color': '#ffffff',
             'border-color': '#293972',
-            'width': 38,
-            'height': 38,
+            'width': 52,
+            'height': 52,
           },
         },
         {
@@ -235,12 +241,14 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'background-color': '#FFE4DF',
             'border-color': '#B50004',
-            'border-width': 3.5,
-            'width': 46,
-            'height': 46,
+            'border-width': 4,
+            'width': 64,
+            'height': 64,
             'color': '#B50004',
+            'font-size': '12px',
             'text-background-color': '#FFE4DF',
             'text-border-color': '#B50004',
+            'text-margin-y': 9,
           },
         },
         {
@@ -248,12 +256,14 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'background-color': '#ffffff',
             'border-color': '#293972',
-            'border-width': 2.5,
-            'width': 38,
-            'height': 38,
+            'border-width': 3,
+            'width': 52,
+            'height': 52,
             'color': '#122149',
+            'font-size': '11px',
             'text-background-color': '#ffffff',
             'text-border-color': '#d1d3e0',
+            'text-margin-y': 8,
           },
         },
         {
@@ -261,12 +271,14 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'background-color': '#E6F9F0',
             'border-color': '#007D04',
-            'border-width': 3.5,
-            'width': 44,
-            'height': 44,
+            'border-width': 4,
+            'width': 60,
+            'height': 60,
             'color': '#005602',
+            'font-size': '12px',
             'text-background-color': '#E6F9F0',
             'text-border-color': '#007D04',
+            'text-margin-y': 9,
           },
         },
         {
@@ -275,22 +287,22 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
             'curve-style': 'bezier',
             'target-arrow-shape': 'triangle',
             'target-arrow-color': '#626e82',
-            'line-color': '#8c96a8',
-            'width': 2.5,
-            'arrow-scale': 1.2,
+            'line-color': '#7a879c',
+            'width': 3.5,
+            'arrow-scale': 1.35,
             'label': 'data(label)',
-            'font-size': '10px',
+            'font-size': '11px',
             'font-family': 'JetBrains Mono, monospace',
             'font-weight': 'bold',
             'color': '#122149',
             'text-background-color': '#ffffff',
             'text-background-opacity': 0.95,
-            'text-background-padding': '3px',
+            'text-background-padding': '3px 6px',
             'text-background-shape': 'roundrectangle',
             'text-border-width': 1,
             'text-border-color': '#d1d3e0',
             'text-rotation': 'autorotate',
-            'text-margin-y': -8,
+            'text-margin-y': -9,
             'transition-property': 'line-color, target-arrow-color, opacity, width',
             'transition-duration': 0.2,
           },
@@ -299,7 +311,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           selector: 'node:selected',
           style: {
             'border-color': '#FF5300',
-            'border-width': 4,
+            'border-width': 5,
             'background-color': '#FFF3EB',
           },
         },
@@ -308,14 +320,14 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'line-color': '#FF5300',
             'target-arrow-color': '#FF5300',
-            'width': 4.5,
+            'width': 5.5,
           },
         },
         {
           selector: 'node.highlighted',
           style: {
             'border-color': '#FF5300',
-            'border-width': 4,
+            'border-width': 5,
             'opacity': 1.0,
             'z-index': 999,
           },
@@ -325,7 +337,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           style: {
             'line-color': '#FF5300',
             'target-arrow-color': '#FF5300',
-            'width': 4,
+            'width': 5,
             'opacity': 1.0,
             'z-index': 999,
             'color': '#FF5300',
@@ -398,13 +410,13 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       let labelText = `${shortAddr(n.address)}`;
       if (n.node_type === 'suspect') {
         const sentAmount = n.total_sent ? formatAmount(n.total_sent) : '';
-        labelText = `🚨 SUSPECT\n${shortAddr(n.address)}${sentAmount ? `\nSent: ${sentAmount}` : ''}`;
+        labelText = `🚨 ROOT SUSPECT\n${shortAddr(n.address)}${sentAmount ? `\nSent: ${sentAmount}` : ''}`;
       } else if (n.node_type === 'endpoint') {
         const recAmount = n.total_received ? formatAmount(n.total_received) : '';
         labelText = `🎯 VASP ENDPOINT\n${shortAddr(n.address)}${recAmount ? `\nRec: ${recAmount}` : ''}`;
       } else {
         const recAmount = n.total_received ? formatAmount(n.total_received) : '';
-        labelText = `Hop ${n.hop}\n${shortAddr(n.address)}${recAmount ? `\n${recAmount}` : ''}`;
+        labelText = `HOP ${n.hop}\n${shortAddr(n.address)}${recAmount ? `\n${recAmount}` : ''}`;
       }
 
       elements.push({
@@ -453,8 +465,8 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
         name: 'breadthfirst',
         directed: true,
         roots: (rootSuspectAddress ? `[id = "${rootSuspectAddress}"]` : undefined) as any,
-        padding: 60,
-        spacingFactor: 1.6,
+        padding: 45,
+        spacingFactor: 1.45,
         animate: false,
       },
     });
@@ -554,8 +566,8 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       name: 'breadthfirst',
       directed: true,
       roots: (rootAddr ? `[id = "${rootAddr}"]` : undefined) as any,
-      padding: 60,
-      spacingFactor: 1.6,
+      padding: 45,
+      spacingFactor: 1.45,
       animate: true,
       animationDuration: 400,
     }).run();
@@ -577,7 +589,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
   const isSingleNode = graph.nodes.length === 1 && graph.edges.length === 0;
 
   return (
-    <div className="relative flex-1 w-full h-full min-h-[520px] bg-surface-50 border border-surface-200 rounded-lg overflow-hidden flex flex-col transition-colors">
+    <div className="relative flex-1 w-full h-full min-h-[480px] bg-surface-50 overflow-hidden flex flex-col transition-colors">
       {/* Visual Canvas */}
       <div ref={containerRef} className="flex-1 w-full h-full cursor-grab active:cursor-grabbing" />
 
@@ -590,14 +602,14 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       )}
 
       {/* Floating Reactor Graph Toolbar */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-1 p-1 rounded-lg bg-surface-default/95 dark:bg-surface-100/95 border border-surface-200 dark:border-surface-300 shadow-lg backdrop-blur">
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-1.5 p-1.5 rounded-lg bg-surface-default/95 dark:bg-surface-100/95 border border-surface-200 dark:border-surface-300 shadow-lg backdrop-blur">
         <button
           onClick={handleZoomIn}
           className="p-2 rounded hover:bg-surface-100 dark:hover:bg-surface-200 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition"
           title="Zoom In"
           aria-label="Zoom In"
         >
-          <ZoomIn className="h-4 w-4" />
+          <ZoomIn className="h-4.5 w-4.5" />
         </button>
         <button
           onClick={handleZoomOut}
@@ -605,7 +617,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           title="Zoom Out"
           aria-label="Zoom Out"
         >
-          <ZoomOut className="h-4 w-4" />
+          <ZoomOut className="h-4.5 w-4.5" />
         </button>
         <button
           onClick={handleFit}
@@ -613,7 +625,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           title="Fit to Screen"
           aria-label="Fit to Screen"
         >
-          <Maximize2 className="h-4 w-4" />
+          <Maximize2 className="h-4.5 w-4.5" />
         </button>
         <button
           onClick={handleCenterRoot}
@@ -621,7 +633,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           title="Center on Root Suspect"
           aria-label="Center on Root Suspect"
         >
-          <Crosshair className="h-4 w-4" />
+          <Crosshair className="h-4.5 w-4.5" />
         </button>
         <button
           onClick={handleResetLayout}
@@ -629,7 +641,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           title="Re-run Directed Layout"
           aria-label="Re-run Directed Layout"
         >
-          <RotateCcw className="h-4 w-4" />
+          <RotateCcw className="h-4.5 w-4.5" />
         </button>
         <div className="w-full h-px bg-surface-200 dark:bg-surface-300 my-0.5" />
         <button
@@ -642,27 +654,27 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
           title={showLabels ? 'Hide Amount Labels' : 'Show Amount Labels'}
           aria-label="Toggle Amount Labels"
         >
-          <Tag className="h-4 w-4" />
+          <Tag className="h-4.5 w-4.5" />
         </button>
       </div>
 
       {/* Legend Badge Bar */}
-      <div className="absolute bottom-4 left-4 z-10 p-2 rounded-lg bg-surface-default/95 dark:bg-surface-100/95 border border-surface-200 dark:border-surface-300 shadow-lg backdrop-blur flex flex-wrap items-center gap-3 text-xs">
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-red-600 border border-red-400" />
-          <span className="text-surface-700 dark:text-surface-300 font-semibold">Suspect Root</span>
+      <div className="absolute bottom-4 left-4 z-10 p-2.5 rounded-lg bg-surface-default/95 dark:bg-surface-100/95 border border-surface-200 dark:border-surface-300 shadow-lg backdrop-blur flex flex-wrap items-center gap-3.5 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="h-3.5 w-3.5 rounded-full bg-red-600 border border-red-400 shrink-0" />
+          <span className="text-surface-800 dark:text-surface-200 font-bold">Suspect Root</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-blue-600 border border-blue-400" />
-          <span className="text-surface-700 dark:text-surface-300 font-semibold">Intermediate Mule</span>
+        <div className="flex items-center gap-2">
+          <span className="h-3.5 w-3.5 rounded-full bg-blue-600 border border-blue-400 shrink-0" />
+          <span className="text-surface-800 dark:text-surface-200 font-bold">Intermediate Hop</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-emerald-600 border border-emerald-400" />
-          <span className="text-surface-700 dark:text-surface-300 font-semibold">VASP Endpoint</span>
+        <div className="flex items-center gap-2">
+          <span className="h-3.5 w-3.5 rounded-full bg-emerald-600 border border-emerald-400 shrink-0" />
+          <span className="text-surface-800 dark:text-surface-200 font-bold">VASP Endpoint</span>
         </div>
-        <div className="hidden sm:flex items-center gap-1 text-surface-500 pl-2 border-l border-surface-200 dark:border-surface-300 font-medium">
-          <Sparkles className="h-3 w-3 text-reactor-orange" />
-          <span>Click entity or edge to trace path to root</span>
+        <div className="hidden sm:flex items-center gap-1.5 text-surface-500 pl-2.5 border-l border-surface-200 dark:border-surface-300 font-medium">
+          <Sparkles className="h-3.5 w-3.5 text-reactor-orange shrink-0" />
+          <span>Click node or edge to inspect &amp; trace path to root</span>
         </div>
       </div>
     </div>

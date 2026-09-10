@@ -169,15 +169,15 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
             </div>
 
             {/* Address Box */}
-            <div className="p-3 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2">
-              <div className="text-[11px] text-surface-500 uppercase font-semibold">Wallet Address</div>
-              <div className="font-mono text-xs text-emerald-700 dark:text-emerald-400 break-all select-all font-semibold leading-relaxed">
+            <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2.5">
+              <div className="text-[11px] text-surface-500 uppercase font-bold tracking-wider">Wallet Address</div>
+              <div className="font-mono text-xs sm:text-[13px] text-emerald-700 dark:text-emerald-400 break-all select-all font-bold leading-relaxed p-2.5 rounded-md bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
                 {selectedNode.address}
               </div>
               <div className="flex justify-between items-center pt-1 border-t border-surface-200 dark:border-surface-300">
                 <button
                   onClick={() => copyToClipboard(selectedNode.address, 'node-addr')}
-                  className="flex items-center gap-1 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white transition font-medium"
+                  className="flex items-center gap-1 text-xs text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition font-semibold cursor-pointer"
                 >
                   {copiedKey === 'node-addr' ? (
                     <>
@@ -195,7 +195,7 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
                   href={`https://tronscan.org/#/address/${selectedNode.address}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-xs text-brand-blue dark:text-blue-400 hover:underline transition font-medium"
+                  className="flex items-center gap-1 text-xs text-brand-blue dark:text-blue-400 hover:underline transition font-semibold"
                 >
                   <span>TronScan</span>
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -204,46 +204,46 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
             </div>
 
             {/* 2-Column Financial Summary Card */}
-            <div className="p-3 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2.5">
-              <div className="text-[11px] text-surface-500 uppercase font-semibold">Financial Ledger Profile</div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="p-2 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
-                  <span className="text-[10px] text-surface-500 block uppercase font-medium">Total Received</span>
-                  <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+            <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2.5">
+              <div className="text-[11px] text-surface-500 uppercase font-bold tracking-wider">Financial Ledger Profile</div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="p-2.5 rounded-md bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
+                  <span className="text-[10px] text-surface-500 block uppercase font-bold tracking-wider">Total Received</span>
+                  <span className="font-mono font-extrabold text-sm sm:text-base text-emerald-600 dark:text-emerald-400 mt-1 block">
                     {formatUsdt(selectedNode.total_received)}
                   </span>
                 </div>
-                <div className="p-2 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
-                  <span className="text-[10px] text-surface-500 block uppercase font-medium">Total Sent Out</span>
-                  <span className="font-mono font-bold text-xs text-red-600 dark:text-red-400 mt-0.5 block">
+                <div className="p-2.5 rounded-md bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
+                  <span className="text-[10px] text-surface-500 block uppercase font-bold tracking-wider">Total Sent Out</span>
+                  <span className="font-mono font-extrabold text-sm sm:text-base text-red-600 dark:text-red-400 mt-1 block">
                     {formatUsdt(selectedNode.total_sent)}
                   </span>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="grid grid-cols-2 gap-2.5 pt-1.5 border-t border-surface-200 dark:border-surface-300">
                 <div>
-                  <span className="text-[10px] text-surface-500 block uppercase">Net Retained</span>
-                  <span className="font-mono font-bold text-xs text-surface-800 dark:text-surface-100">
+                  <span className="text-[10px] text-surface-500 block uppercase font-bold tracking-wider">Net Retained</span>
+                  <span className="font-mono font-bold text-xs sm:text-sm text-surface-900 dark:text-white">
                     {formatUsdt(netRetained)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-surface-500 block uppercase">Observed Transactions:</span>
-                  <span className="font-mono font-bold text-xs text-surface-800 dark:text-surface-100">
-                    {selectedNode.transaction_count} transfers
+                  <span className="text-[10px] text-surface-500 block uppercase font-bold tracking-wider">Observed Transfers</span>
+                  <span className="font-mono font-bold text-xs sm:text-sm text-surface-900 dark:text-white">
+                    {selectedNode.transaction_count} txs
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Forensic Movement Narrative */}
-            <div className="p-3 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300 space-y-1.5">
-              <div className="text-[11px] text-surface-500 uppercase font-semibold flex items-center gap-1.5">
+            <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300 space-y-2">
+              <div className="text-[11px] text-surface-500 uppercase font-bold tracking-wider flex items-center gap-1.5">
                 <TrendingDown className="h-3.5 w-3.5 text-brand-blue dark:text-blue-400" />
                 <span>Forensic Interpretation</span>
               </div>
-              <p className="text-xs text-surface-600 dark:text-surface-300 leading-relaxed">
+              <p className="text-xs sm:text-[13px] text-surface-700 dark:text-surface-200 leading-relaxed font-normal">
                 {selectedNode.node_type === 'suspect' ? (
                   'Designated primary victim loss exit / suspect source wallet. All downstream funds cascade from this root address across multi-hop layering.'
                 ) : selectedNode.node_type === 'endpoint' ? (
@@ -255,13 +255,13 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
             </div>
 
             {/* Quick Actions */}
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2 pt-1">
               {onHighlightPathToRoot && selectedNode.node_type !== 'suspect' && (
                 <button
                   onClick={() => onHighlightPathToRoot(selectedNode.address)}
-                  className="w-full py-2 px-3 rounded-lg bg-surface-100 hover:bg-surface-200 dark:bg-surface-200 dark:hover:bg-surface-300 text-surface-800 dark:text-surface-100 font-semibold text-xs transition flex items-center justify-center gap-1.5 border border-surface-200 dark:border-surface-300 cursor-pointer"
+                  className="w-full py-2.5 px-3 rounded-lg bg-surface-100 hover:bg-surface-200 dark:bg-surface-200 dark:hover:bg-surface-300 text-surface-800 dark:text-surface-100 font-bold text-xs transition flex items-center justify-center gap-2 border border-surface-200 dark:border-surface-300 cursor-pointer shadow-xs"
                 >
-                  <Target className="h-3.5 w-3.5 text-reactor-orange" />
+                  <Target className="h-4 w-4 text-reactor-orange" />
                   Highlight Dijkstra Path to Root
                 </button>
               )}
@@ -269,9 +269,9 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
               {selectedNode.node_type === 'endpoint' && onNavigateToReports && (
                 <button
                   onClick={onNavigateToReports}
-                  className="w-full py-2 px-3 rounded-lg bg-brand-blue hover:bg-brand-hover text-white font-semibold text-xs transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                  className="w-full py-2.5 px-3 rounded-lg bg-brand-blue hover:bg-brand-hover text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
-                  <FileText className="h-3.5 w-3.5" />
+                  <FileText className="h-4 w-4" />
                   Draft Section 94 Notice for VASP
                 </button>
               )}
@@ -279,9 +279,9 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
               {onNavigateToEvidence && (
                 <button
                   onClick={onNavigateToEvidence}
-                  className="w-full py-2 px-3 rounded-lg bg-surface-50 hover:bg-surface-100 dark:bg-surface-200/40 dark:hover:bg-surface-200 text-surface-600 dark:text-surface-300 font-medium text-xs transition flex items-center justify-center gap-1.5 border border-surface-200 dark:border-surface-300 cursor-pointer"
+                  className="w-full py-2.5 px-3 rounded-lg bg-surface-50 hover:bg-surface-100 dark:bg-surface-200/40 dark:hover:bg-surface-200 text-surface-700 dark:text-surface-200 font-semibold text-xs transition flex items-center justify-center gap-2 border border-surface-200 dark:border-surface-300 cursor-pointer shadow-xs"
                 >
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
                   Verify in Cryptographic Evidence Vault
                 </button>
               )}
@@ -303,9 +303,9 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
             </div>
 
             {/* Transfer Value Card */}
-            <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-1">
-              <div className="text-[11px] text-surface-500 uppercase font-semibold">Transfer Value</div>
-              <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+            <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-1.5">
+              <div className="text-[11px] text-surface-500 uppercase font-bold tracking-wider">Transfer Value</div>
+              <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
                 {formatUsdt(selectedEdge.amount)}
               </div>
               <div className="text-[11px] text-surface-500 font-mono">
@@ -314,37 +314,37 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
             </div>
 
             {/* Directional Route */}
-            <div className="p-3 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2">
-              <div className="text-[11px] text-surface-500 uppercase font-semibold">Directional Route</div>
+            <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2.5">
+              <div className="text-[11px] text-surface-500 uppercase font-bold tracking-wider">Directional Route</div>
               <div className="space-y-2 font-mono text-xs">
                 <div>
-                  <span className="text-[10px] text-surface-500 uppercase block">Source (From)</span>
-                  <span className="text-surface-800 dark:text-surface-200 font-medium break-all">
+                  <span className="text-[10px] text-surface-500 uppercase font-bold tracking-wider block mb-1">Source (From)</span>
+                  <div className="text-surface-800 dark:text-surface-200 font-bold break-all p-2 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
                     {selectedEdge.from_address}
-                  </span>
+                  </div>
                 </div>
                 <div className="flex justify-center text-surface-400 py-0.5">
                   <ArrowRight className="h-4 w-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] text-surface-500 uppercase block">Destination (To)</span>
-                  <span className="text-surface-800 dark:text-surface-200 font-medium break-all">
+                  <span className="text-[10px] text-surface-500 uppercase font-bold tracking-wider block mb-1">Destination (To)</span>
+                  <div className="text-surface-800 dark:text-surface-200 font-bold break-all p-2 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
                     {selectedEdge.to_address}
-                  </span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Tx Hash */}
-            <div className="p-3 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-1.5">
-              <div className="text-[11px] text-surface-500 uppercase font-semibold">Transaction Hash</div>
-              <div className="font-mono text-xs text-surface-700 dark:text-surface-300 break-all select-all font-medium leading-relaxed">
+            <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2">
+              <div className="text-[11px] text-surface-500 uppercase font-bold tracking-wider">Transaction Hash</div>
+              <div className="font-mono text-xs sm:text-[13px] text-surface-800 dark:text-surface-200 break-all select-all font-bold leading-relaxed p-2.5 rounded bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300">
                 {selectedEdge.tx_hash}
               </div>
               <div className="flex justify-between items-center pt-1 border-t border-surface-200 dark:border-surface-300">
                 <button
                   onClick={() => copyToClipboard(selectedEdge.tx_hash, 'edge-hash')}
-                  className="flex items-center gap-1 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white transition font-medium"
+                  className="flex items-center gap-1 text-xs text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition font-semibold cursor-pointer"
                 >
                   {copiedKey === 'edge-hash' ? (
                     <>
@@ -362,7 +362,7 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
                   href={`https://tronscan.org/#/transaction/${selectedEdge.tx_hash}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-xs text-brand-blue dark:text-blue-400 hover:underline transition font-medium"
+                  className="flex items-center gap-1 text-xs text-brand-blue dark:text-blue-400 hover:underline transition font-semibold"
                 >
                   <span>TronScan</span>
                   <ExternalLink className="h-3.5 w-3.5" />
