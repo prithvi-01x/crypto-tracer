@@ -18,6 +18,7 @@ import { EvidenceWorkstation } from '../evidence/EvidenceWorkstation';
 import { VaspAttributionBanner } from '../graph/VaspAttributionBanner';
 import { ReportsView } from '../reports/ReportsView';
 import { ForensicFindingsPanel } from '../findings/ForensicFindingsPanel';
+import { CaseNotesModal } from './CaseNotesModal';
 
 interface CaseDetailsViewProps {
   caseId: string;
@@ -34,6 +35,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   const [findingsLoading, setFindingsLoading] = useState<boolean>(false);
   const [showFindingsDrawer, setShowFindingsDrawer] = useState<boolean>(false);
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState<boolean>(false);
 
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
@@ -146,9 +148,13 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
             </span>
             
             <div className="w-px h-4 bg-surface-200" />
-            <span className="text-surface-600 truncate max-w-[180px]" title={caseData.notes || caseData.description || 'Cyber Financial Fraud'}>
-              {caseData.description || 'Task-Based Scam'}
-            </span>
+            <button
+              onClick={() => setIsNotesModalOpen(true)}
+              className="text-left text-surface-600 hover:text-brand-blue truncate max-w-[200px] transition cursor-pointer"
+              title={caseData.notes ? `${caseData.notes}\n\n(Click to view / edit notes)` : 'No notes recorded. Click to add.'}
+            >
+              {caseData.notes ? caseData.notes.split('\n')[0] : 'Task-Based Scam'}
+            </button>
             
             <div className="w-px h-4 bg-surface-200" />
             <span className="font-mono font-medium text-red-700 whitespace-nowrap">
@@ -179,8 +185,11 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
             >
               <Download className="h-4 w-4" /> Export Trace Dossier
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-surface-200 bg-surface-default hover:bg-surface-50 text-base font-semibold text-surface-700 transition">
-              <PlusCircle className="h-4 w-4" /> Add Note
+            <button 
+              onClick={() => setIsNotesModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-surface-200 bg-surface-default hover:bg-surface-50 text-base font-semibold text-surface-700 transition"
+            >
+              <PlusCircle className="h-4 w-4 text-brand-blue" /> Add Note
             </button>
           </div>
         </div>
@@ -361,6 +370,16 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
         <span>Crypto-Tracer Forensic Platform &bull; Enterprise Case Workspace</span>
         <span>Session: Active &amp; Encrypted</span>
       </footer>
+
+      {/* Case Notes Modal */}
+      {caseData && (
+        <CaseNotesModal
+          isOpen={isNotesModalOpen}
+          onClose={() => setIsNotesModalOpen(false)}
+          caseData={caseData}
+          onCaseUpdated={(updated) => setCaseData(updated)}
+        />
+      )}
     </div>
   );
 };

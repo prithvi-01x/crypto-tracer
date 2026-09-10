@@ -32,3 +32,34 @@ export async function createCase(data: CaseCreateInput): Promise<CaseItem> {
   }
   return res.json();
 }
+
+export async function updateCase(caseId: string, data: { notes?: string; status?: string }): Promise<CaseItem> {
+  const res = await fetch(`${API_BASE}/cases/${caseId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => null);
+    throw new Error(errorJson?.detail || `Failed to update case: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function addCaseNote(caseId: string, note: string, author?: string): Promise<CaseItem> {
+  const res = await fetch(`${API_BASE}/cases/${caseId}/notes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ note, author: author || 'Investigating Officer' }),
+  });
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => null);
+    throw new Error(errorJson?.detail || `Failed to add case note: ${res.statusText}`);
+  }
+  return res.json();
+}
+
