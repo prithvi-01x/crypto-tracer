@@ -35,6 +35,8 @@ ADDR_HOP2_CONSOLIDATION = "TMuleConsolidationHop2222222222222"
 ADDR_HOP2_EXPENSES = "TOperationalExpensesHop22222222222"
 ADDR_HOP2_DUST = "TDustMicroRefundHop22222222222222"
 ADDR_HOP2_CASHOUT_P2P = "TCashoutP2PTraderHop22222222222222"
+ADDR_HOP2_FEEDER_1 = "TFeederSyndicatePool1Hop222222222"
+ADDR_HOP2_FEEDER_2 = "TFeederSyndicatePool2Hop222222222"
 
 ADDR_HOP3_CANDIDATE = "TBinanceUserDepositCandidate333333"
 ADDR_HOP3_BROKER_FEE = "TOtcBrokerCommissionHop33333333333"
@@ -157,7 +159,29 @@ def build_canonical_demo_fixtures(base_time: Optional[datetime] = None) -> Dict[
         ),
     ]
 
-    # 4. Hop 2 (Mule Consolidation) Outgoing
+    # 4. Hop 2 Feeder Pools (Inbound to Consolidation: 7,500 + 5,000 = 12,500 USDT)
+    feeder1_txs = [
+        _create_transfer(
+            tx_hash="a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789012345c",
+            from_addr=ADDR_HOP2_FEEDER_1,
+            to_addr=ADDR_HOP2_CONSOLIDATION,
+            amount_usdt=7500.00,
+            ts=t0 + timedelta(minutes=22, seconds=10),
+            block_num=59124060,
+        ),
+    ]
+    feeder2_txs = [
+        _create_transfer(
+            tx_hash="b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef01234567890123456d",
+            from_addr=ADDR_HOP2_FEEDER_2,
+            to_addr=ADDR_HOP2_CONSOLIDATION,
+            amount_usdt=5000.00,
+            ts=t0 + timedelta(minutes=28, seconds=45),
+            block_num=59124080,
+        ),
+    ]
+
+    # 5. Hop 2 (Mule Consolidation) Outgoing
     hop2_consolidation_txs = [
         # Consolidation to Deposit Candidate: 62,100 USDT
         _create_transfer(
@@ -179,7 +203,7 @@ def build_canonical_demo_fixtures(base_time: Optional[datetime] = None) -> Dict[
         ),
     ]
 
-    # 5. Hop 3 (Deposit Candidate) Outgoing
+    # 6. Hop 3 (Deposit Candidate) Outgoing
     # Note: received 62,100 USDT at t0 + 45m10s
     # Sweeps 61,980 USDT to Binance Hot Wallet 4 at t0 + 59m12s (14m 02s delay, 99.8% sweep!)
     hop3_candidate_txs = [
@@ -198,6 +222,8 @@ def build_canonical_demo_fixtures(base_time: Optional[datetime] = None) -> Dict[
         ADDR_HOP1_LAYERING: hop1_layering_txs,
         ADDR_HOP1_MULE_ALT: hop1_alt_txs,
         ADDR_HOP1_DUST: [],
+        ADDR_HOP2_FEEDER_1: feeder1_txs,
+        ADDR_HOP2_FEEDER_2: feeder2_txs,
         ADDR_HOP2_CONSOLIDATION: hop2_consolidation_txs,
         ADDR_HOP2_EXPENSES: [],
         ADDR_HOP2_DUST: [],
@@ -227,15 +253,16 @@ class DemoFixtureProvider(BlockchainProvider):
         direction: Optional[str] = None,
     ) -> TransferPage:
         clean_addr = address.strip()
-        txs = self.fixtures.get(clean_addr, [])
 
         # Filter by direction if requested
-        if direction == "outgoing":
+        if direction == "incoming":
+            all_txs = [t for sublist in self.fixtures.values() for t in sublist]
+            filtered = [t for t in all_txs if t.to_address == clean_addr]
+        elif direction == "outgoing":
+            txs = self.fixtures.get(clean_addr, [])
             filtered = [t for t in txs if t.from_address == clean_addr]
-        elif direction == "incoming":
-            filtered = [t for t in txs if t.to_address == clean_addr]
         else:
-            filtered = txs
+            filtered = self.fixtures.get(clean_addr, [])
 
         # Pagination simulation
         start_idx = int(cursor) if cursor and cursor.isdigit() else 0
@@ -258,8 +285,15 @@ def is_canonical_demo_address(address: str) -> bool:
         ADDR_SUSPECT_ROOT,
         ADDR_HOP1_LAYERING,
         ADDR_HOP1_MULE_ALT,
+        ADDR_HOP1_DUST,
+        ADDR_HOP2_FEEDER_1,
+        ADDR_HOP2_FEEDER_2,
         ADDR_HOP2_CONSOLIDATION,
+        ADDR_HOP2_EXPENSES,
+        ADDR_HOP2_DUST,
+        ADDR_HOP2_CASHOUT_P2P,
         ADDR_HOP3_CANDIDATE,
+        ADDR_HOP3_BROKER_FEE,
         ADDR_HOP4_BINANCE_HOT,
     }
     return address.strip() in canonical_addresses

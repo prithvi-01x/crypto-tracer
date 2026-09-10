@@ -70,7 +70,7 @@ def get_canonical_scenario_dict() -> Dict[str, Any]:
                 "hop": 2,
                 "role": "Mule Consolidation Node",
                 "address": ADDR_HOP2_CONSOLIDATION,
-                "description": "Aggregates multi-source syndicate funds (49,850 USDT).",
+                "description": "Aggregates multi-source syndicate funds (49,850 USDT primary + 12,500 USDT syndicated feeder pools = 62,350 USDT balanced).",
             },
             {
                 "hop": 3,
