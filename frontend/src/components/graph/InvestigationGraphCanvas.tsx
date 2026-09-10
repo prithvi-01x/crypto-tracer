@@ -343,8 +343,22 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
 
     if (!selectedNode && !selectedEdge) {
       cy.elements().removeClass('highlighted faded selected');
+    } else if (selectedNode) {
+      highlightPathToRoot(selectedNode.address);
+      const el = cy.getElementById(selectedNode.address);
+      if (el && el.length > 0) {
+        cy.center(el);
+        cy.zoom(1.2);
+        el.addClass('selected');
+      }
+    } else if (selectedEdge) {
+      cy.elements().addClass('faded');
+      const edgeEl = cy.getElementById(selectedEdge.id) || cy.edges(`[source = "${selectedEdge.from_address}"][target = "${selectedEdge.to_address}"]`);
+      if (edgeEl && edgeEl.length > 0) {
+        edgeEl.removeClass('faded').addClass('highlighted selected');
+      }
     }
-  }, [selectedNode, selectedEdge]);
+  }, [selectedNode, selectedEdge, highlightPathToRoot]);
 
   // Toolbar Actions
   const handleZoomIn = () => cyRef.current?.zoom(cyRef.current.zoom() * 1.3);

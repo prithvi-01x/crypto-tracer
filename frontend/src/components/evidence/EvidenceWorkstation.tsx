@@ -17,24 +17,32 @@ interface EvidenceWorkstationProps {
   caseId: string;
   traceId: string | null;
   firNumber: string;
+  initialSelectedEvidenceId?: string | null;
 }
 
 export const EvidenceWorkstation: React.FC<EvidenceWorkstationProps> = ({
-  caseId,
+  caseId: _caseId,
   traceId,
   firNumber,
+  initialSelectedEvidenceId,
 }) => {
   const [evidenceChain, setEvidenceChain] = useState<EvidenceChain | null>(null);
   const [loading, setLoading] = useState(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEvId, setSelectedEvId] = useState<string | null>(null);
+  const [selectedEvId, setSelectedEvId] = useState<string | null>(initialSelectedEvidenceId || null);
   const [enabledClasses, setEnabledClasses] = useState<Record<EvidenceClassification, boolean>>({
     OBSERVED: true,
     DERIVED: true,
     INFERRED: true,
     HUMAN_ACTION: true,
   });
+
+  useEffect(() => {
+    if (initialSelectedEvidenceId) {
+      setSelectedEvId(initialSelectedEvidenceId);
+    }
+  }, [initialSelectedEvidenceId]);
 
   useEffect(() => {
     if (!traceId) return;
@@ -44,7 +52,7 @@ export const EvidenceWorkstation: React.FC<EvidenceWorkstationProps> = ({
         const data = await getTraceEvidence(traceId!);
         setEvidenceChain(data);
         if (data.items && data.items.length > 0) {
-          setSelectedEvId(prev => prev || data.items[0].id);
+          setSelectedEvId(prev => prev || initialSelectedEvidenceId || data.items[0].id);
         }
       } catch (err: any) {
         console.error('Failed to fetch trace evidence:', err);
@@ -53,7 +61,7 @@ export const EvidenceWorkstation: React.FC<EvidenceWorkstationProps> = ({
       }
     }
     fetchEvidence();
-  }, [traceId]);
+  }, [traceId, initialSelectedEvidenceId]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);

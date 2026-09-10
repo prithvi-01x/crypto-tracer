@@ -1,19 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ArrowLeft, 
   Download,
-  PlusCircle
+  PlusCircle,
+  ShieldAlert
 } from 'lucide-react';
 import type { CaseItem } from '../../types/case';
 import type { InvestigationGraph, TraceStatus, GraphNode, GraphEdge } from '../../types/graph';
 import type { AttributionResponse } from '../../types/attribution';
+import type { ForensicFindingItem } from '../../types/findings';
 import { getCaseById } from '../../api/cases';
 import { getTracesByCase, getTraceGraph, getTraceAttribution } from '../../api/traces';
+import { getCaseFindings } from '../../api/findings';
 import { InvestigationGraphCanvas } from '../graph/InvestigationGraphCanvas';
 import { GraphDetailDrawer } from '../graph/GraphDetailDrawer';
 import { EvidenceWorkstation } from '../evidence/EvidenceWorkstation';
 import { VaspAttributionBanner } from '../graph/VaspAttributionBanner';
 import { ReportsView } from '../reports/ReportsView';
+import { ForensicFindingsPanel } from '../findings/ForensicFindingsPanel';
 
 interface CaseDetailsViewProps {
   caseId: string;
@@ -26,11 +30,15 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const [graph, setGraph] = useState<InvestigationGraph | null>(null);
   const [attribution, setAttribution] = useState<AttributionResponse | null>(null);
+  const [findings, setFindings] = useState<ForensicFindingItem[]>([]);
+  const [findingsLoading, setFindingsLoading] = useState<boolean>(false);
+  const [showFindingsDrawer, setShowFindingsDrawer] = useState<boolean>(false);
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
 
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'graph' | 'attribution' | 'evidence' | 'reports'>('graph');
+  const [activeTab, setActiveTab] = useState<'graph' | 'attribution' | 'evidence' | 'reports' | 'findings'>('graph');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,6 +63,22 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
     load();
   }, [caseId]);
 
+  const loadFindings = useCallback(async () => {
+    setFindingsLoading(true);
+    try {
+      const res = await getCaseFindings(caseId);
+      setFindings(res.findings);
+    } catch (err) {
+      console.error('Failed to load findings:', err);
+    } finally {
+      setFindingsLoading(false);
+    }
+  }, [caseId]);
+
+  useEffect(() => {
+    loadFindings();
+  }, [loadFindings, selectedTraceId]);
+
   useEffect(() => {
     if (!selectedTraceId) return;
     async function fetchDetails() {
@@ -65,12 +89,30 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
         ]);
         if (graphRes.status === 'fulfilled') setGraph(graphRes.value);
         if (attrRes.status === 'fulfilled') setAttribution(attrRes.value);
+        loadFindings();
       } catch (err) {
         console.error(err);
       }
     }
     fetchDetails();
-  }, [selectedTraceId]);
+  }, [selectedTraceId, loadFindings]);
+
+  const handleViewOnGraph = (addressOrId: string) => {
+    setActiveTab('graph');
+    setShowFindingsDrawer(false);
+    if (graph && graph.nodes) {
+      const node = graph.nodes.find(n => n.address === addressOrId || n.id === addressOrId);
+      if (node) {
+        setSelectedNode(node);
+        setSelectedEdge(null);
+      }
+    }
+  };
+
+  const handleViewEvidence = (evidenceId: string) => {
+    setSelectedEvidenceId(evidenceId);
+    setActiveTab('evidence');
+  };
 
   if (loading || !caseData) {
     return (
@@ -147,11 +189,11 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
       {/* Tabs */}
       <div className="bg-surface-50 border-b border-surface-200 px-6">
         <div className="max-w-[1440px] mx-auto flex items-center gap-6">
-          {(['graph', 'attribution', 'evidence', 'reports'] as const).map(tab => (
+          {(['graph', 'attribution', 'findings', 'evidence', 'reports'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`py-3 text-lg font-semibold border-b-2 transition-colors ${
+              className={`py-3 text-lg font-semibold border-b-2 transition-colors flex items-center gap-2 ${
                 activeTab === tab 
                   ? 'border-brand-blue text-brand-blue' 
                   : 'border-transparent text-surface-500 hover:text-surface-800'
@@ -159,6 +201,22 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
             >
               {tab === 'graph' && 'Trace Graph'}
               {tab === 'attribution' && 'VASP Attribution'}
+              {tab === 'findings' && (
+                <span className="flex items-center gap-1.5">
+                  Forensic Findings
+                  {findings.length > 0 && (
+                    <span className={`px-2 py-0.5 text-xs rounded-full font-mono font-bold ${
+                      findings.some(f => f.severity === 'CRITICAL' && f.status === 'OPEN')
+                        ? 'bg-red-500 text-white animate-pulse'
+                        : findings.some(f => f.severity === 'HIGH' && f.status === 'OPEN')
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-surface-200 text-surface-700'
+                    }`}>
+                      {findings.filter(f => f.status === 'OPEN').length || findings.length}
+                    </span>
+                  )}
+                </span>
+              )}
               {tab === 'evidence' && 'Evidence Vault'}
               {tab === 'reports' && 'Reports & Legal Draft'}
             </button>
@@ -177,6 +235,24 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                   <h3 className="font-semibold text-lg text-surface-800">Forensic Transaction Graph</h3>
                   <span className="text-sm bg-surface-200 text-surface-700 px-2 py-0.5 rounded font-mono">TRC-20 USDT Flow &bull; Multi-Hop</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowFindingsDrawer(!showFindingsDrawer)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold border transition ${
+                      showFindingsDrawer
+                        ? 'bg-red-50 border-red-300 text-red-700'
+                        : 'bg-surface-default border-surface-200 text-surface-700 hover:bg-surface-100'
+                    }`}
+                  >
+                    <ShieldAlert className="h-4 w-4 text-red-600" />
+                    Alerts
+                    {findings.length > 0 && (
+                      <span className="px-1.5 py-0.2 bg-red-100 text-red-800 rounded-full text-xs font-mono font-bold">
+                        {findings.filter(f => f.status === 'OPEN').length}
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="flex-1 relative bg-surface-50">
                 {graph ? (
@@ -194,13 +270,42 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                 )}
               </div>
             </div>
-            {/* Detail Drawer */}
+            {/* Detail Drawer or Findings Quick Drawer */}
             <div className="w-full lg:w-[32%] h-[45%] lg:h-full bg-surface-default border border-surface-200 rounded flex flex-col shadow-sm overflow-y-auto">
-               <GraphDetailDrawer
+              {showFindingsDrawer ? (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="p-3 border-b border-surface-200 bg-surface-50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert className="h-4 w-4 text-red-600" />
+                      <span className="font-semibold text-base text-surface-800">Forensic Alerts</span>
+                    </div>
+                    <button
+                      onClick={() => setShowFindingsDrawer(false)}
+                      className="text-surface-500 hover:text-surface-800 text-sm font-medium px-2 py-0.5 rounded border border-surface-200 bg-surface-default"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2">
+                    <ForensicFindingsPanel
+                      caseId={caseData.id}
+                      traceId={selectedTraceId}
+                      findings={findings}
+                      loading={findingsLoading}
+                      onRefresh={loadFindings}
+                      onViewOnGraph={handleViewOnGraph}
+                      onViewEvidence={handleViewEvidence}
+                      compactMode={true}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <GraphDetailDrawer
                   selectedNode={selectedNode}
                   selectedEdge={selectedEdge}
                   onClose={() => { setSelectedNode(null); setSelectedEdge(null); }}
-               />
+                />
+              )}
             </div>
           </div>
         )}
@@ -218,12 +323,28 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
           </div>
         )}
 
+        {activeTab === 'findings' && (
+          <div className="flex-1 overflow-y-auto">
+            <ForensicFindingsPanel
+              caseId={caseData.id}
+              traceId={selectedTraceId}
+              findings={findings}
+              loading={findingsLoading}
+              onRefresh={loadFindings}
+              onViewOnGraph={handleViewOnGraph}
+              onViewEvidence={handleViewEvidence}
+              compactMode={false}
+            />
+          </div>
+        )}
+
         {activeTab === 'evidence' && (
           <div className="flex-1">
             <EvidenceWorkstation
               caseId={caseData.id}
               traceId={selectedTraceId}
               firNumber={caseData.fir_number}
+              initialSelectedEvidenceId={selectedEvidenceId}
             />
           </div>
         )}
