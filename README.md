@@ -486,7 +486,16 @@ crypto-tracer/
 │   │   └── main.tsx                     # React application entry point
 │   ├── package.json                     # Frontend dependencies
 │   └── vite.config.ts                   # Vite build configuration
-├── JUDGE_DEFENSE.md                     # Technical reference for SIH evaluation
+├── docs/                                # Architectural specifications and operational guides
+│   ├── ARCHITECTURE(20260909-130834).md # Technical system architecture
+│   ├── JUDGE_DEFENSE.md                 # Technical reference for SIH evaluation
+│   ├── ORIGINAL_REQUEST.md              # Original requirement specifications
+│   ├── PHASES.md                        # Development implementation phases
+│   ├── PRD(20260909-130829).md          # Product requirements document
+│   ├── PROJECT.md                       # Project status and implementation tracking
+│   ├── run.md                           # System execution and operating guide
+│   ├── SYSTEM_DESIGN(20260909-130839).md# High-level system design
+│   └── TECHSTACK(2).md                  # Technology stack specifications
 └── README.md                            # Comprehensive project documentation
 ```
 
@@ -494,7 +503,7 @@ crypto-tracer/
 
 ## API Reference
 
-The backend exposes 26 verified RESTful operations across 23 path templates under `/api/v1` and root:
+The backend exposes 27 verified RESTful operations across 24 path templates under `/api/v1` and root:
 
 | Method | Endpoint | Description | Request / Response Summary |
 |---|---|---|---|
@@ -505,6 +514,7 @@ The backend exposes 26 verified RESTful operations across 23 path templates unde
 | `POST` | `/api/v1/cases` | Register Case | Creates a new case with FIR number, victim reference, and loss amount. |
 | `GET` | `/api/v1/cases/{id}` | Case Details | Returns complete metadata for a specific investigation case. |
 | `PATCH` | `/api/v1/cases/{id}` | Update Case | Updates investigation status or case notes. |
+| `DELETE` | `/api/v1/cases/{id}` | Delete Case | Removes investigation case and cascades trace/evidence cleanup. |
 | `POST` | `/api/v1/cases/{id}/notes` | Append Case Note | Appends timestamped investigator note with author attribution. |
 | `GET` | `/api/v1/cases/{id}/traces` | List Traces | Returns all multi-hop traces executed under a specific case. |
 | `POST` | `/api/v1/traces` | Launch Trace | Executes multi-hop BFS traversal for a suspect wallet (DEMO or LIVE). |
