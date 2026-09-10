@@ -38,44 +38,7 @@ from backend.app.domain.demo.canonical_data import (
 router = APIRouter(prefix="/demo", tags=["Demo Replay"])
 
 
-@router.get("/status")
-async def get_demo_status(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
-    """
-    Check availability of the canonical SIH demo case and its pre-computed trace.
-    """
-    case = await CaseRepository.get_by_id(db, CANONICAL_CASE_ID)
-    if not case:
-        # Also check by FIR
-        res = await db.execute(select(Case).where(Case.fir_number == CANONICAL_FIR))
-        case = res.scalars().first()
-
-    if not case:
-        return {
-            "loaded": False,
-            "case_id": None,
-            "trace_id": None,
-            "message": "Canonical demo case is not yet seeded. Call POST /api/v1/demo/seed.",
-        }
-
-    traces = await TraceRepository.list_by_case_id(db, case.id)
-    active_trace = traces[0] if traces else None
-
-    return {
-        "loaded": True,
-        "case_id": case.id,
-        "fir_number": case.fir_number,
-        "suspect_wallet": case.suspect_wallet,
-        "trace_id": active_trace.id if active_trace else None,
-        "trace_status": active_trace.status if active_trace else None,
-        "execution_mode": getattr(active_trace, "execution_mode", "DEMO") if active_trace else "DEMO",
-    }
-
-
-@router.get("/canonical")
-async def get_canonical_scenario() -> Dict[str, Any]:
-    """
-    Return specification, narrative, and step-by-step wallet flow for the canonical SIH 2026 scenario.
-    """
+def get_canonical_scenario_dict() -> Dict[str, Any]:
     return {
         "scenario_title": "SIH 2026: 4-Hop TRC-20 USDT Scam Layering into Binance",
         "narrative": (
@@ -125,8 +88,44 @@ async def get_canonical_scenario() -> Dict[str, Any]:
     }
 
 
+@router.get("/status")
+async def get_demo_status(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Check availability of the canonical SIH demo case, its pre-computed trace,
+    and return canonical scenario narrative and wallet topology specifications.
+    """
+    scenario = get_canonical_scenario_dict()
+    case = await CaseRepository.get_by_id(db, CANONICAL_CASE_ID)
+    if not case:
+        # Also check by FIR
+        res = await db.execute(select(Case).where(Case.fir_number == CANONICAL_FIR))
+        case = res.scalars().first()
+
+    if not case:
+        return {
+            "loaded": False,
+            "case_id": None,
+            "trace_id": None,
+            "message": "Canonical demo case is not yet seeded. Call POST /api/v1/demo/seed.",
+            "scenario": scenario,
+        }
+
+    traces = await TraceRepository.list_by_case_id(db, case.id)
+    active_trace = traces[0] if traces else None
+
+    return {
+        "loaded": True,
+        "case_id": case.id,
+        "fir_number": case.fir_number,
+        "suspect_wallet": case.suspect_wallet,
+        "trace_id": active_trace.id if active_trace else None,
+        "trace_status": active_trace.status if active_trace else None,
+        "execution_mode": getattr(active_trace, "execution_mode", "DEMO") if active_trace else "DEMO",
+        "scenario": scenario,
+    }
+
+
 @router.post("/seed", status_code=status.HTTP_201_CREATED)
-@router.post("/reset", status_code=status.HTTP_201_CREATED)
 async def seed_canonical_demo(
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:

@@ -64,6 +64,7 @@ class AttributionReviewRequest(BaseModel):
     actor_id: str = Field("investigator", description="Officer badge / investigator reference")
     decision: str = Field(..., description="ACCEPT or REJECT")
     notes: Optional[str] = Field(None, description="Investigative justification notes")
+    trace_id: Optional[str] = Field(None, description="Associated trace ID if reviewing within a trace context")
 
 
 class AttributionReviewResponse(BaseModel):

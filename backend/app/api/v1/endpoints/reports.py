@@ -395,37 +395,6 @@ async def list_case_reports(
     ]
 
 
-@router.get("/reports/{report_id}", response_model=ReportResponse)
-async def get_report_by_id(
-    report_id: str,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Get metadata and content hash of a specific report.
-    """
-    r = await ReportRepository.get_by_id(db, report_id)
-    if not r:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Report '{report_id}' not found."
-        )
-
-    return ReportResponse(
-        id=r.id,
-        case_id=r.case_id,
-        trace_id=r.trace_id,
-        report_type=ReportType(r.report_type),
-        title=r.title,
-        file_name=os.path.basename(r.file_path),
-        file_size_bytes=r.file_size_bytes,
-        content_hash=r.content_hash,
-        generated_by=r.generated_by,
-        metadata=r.metadata_json or {},
-        created_at=r.created_at,
-        download_url=f"/api/v1/reports/{r.id}/download",
-    )
-
-
 @router.get("/reports/{report_id}/download")
 async def download_report_pdf(
     report_id: str,

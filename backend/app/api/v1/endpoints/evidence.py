@@ -103,93 +103,6 @@ async def get_trace_evidence(
     )
 
 
-@router.get("/cases/{case_id}/evidence", response_model=EvidenceChainResponse)
-async def get_case_evidence(
-    case_id: str,
-    classification: Optional[str] = Query(None, description="Filter by OBSERVED, DERIVED, INFERRED, HUMAN_ACTION"),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Retrieve all evidence items compiled across all traces and actions for a case.
-    """
-    case = await CaseRepository.get_by_id(db, case_id)
-    if not case:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Case '{case_id}' not found."
-        )
-
-    items = await EvidenceRepository.get_by_case_id(db, case_id, classification=classification)
-    all_items = await EvidenceRepository.get_by_case_id(db, case_id)
-
-    return EvidenceChainResponse(
-        case_id=case.id,
-        total_evidence_count=len(all_items),
-        observed_count=sum(1 for it in all_items if it.classification == "OBSERVED"),
-        derived_count=sum(1 for it in all_items if it.classification == "DERIVED"),
-        inferred_count=sum(1 for it in all_items if it.classification == "INFERRED"),
-        human_action_count=sum(1 for it in all_items if it.classification == "HUMAN_ACTION"),
-        items=[
-            EvidenceItemResponse(
-                id=it.id,
-                case_id=it.case_id,
-                trace_id=it.trace_id,
-                evidence_type=it.evidence_type,
-                classification=it.classification,
-                title=it.title,
-                description=it.description,
-                source=it.source,
-                source_reference=it.source_reference,
-                payload=it.payload or {},
-                parent_evidence_ids=it.parent_evidence_ids or [],
-                content_hash=it.content_hash,
-                engine_version=it.engine_version,
-                configuration_snapshot=it.configuration_snapshot,
-                collected_at=it.collected_at,
-                analysis_timestamp=it.analysis_timestamp,
-                created_at=it.created_at,
-            )
-            for it in items
-        ],
-    )
-
-
-@router.get("/evidence/{evidence_id}", response_model=EvidenceItemResponse)
-async def get_evidence_by_id(
-    evidence_id: str,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Retrieve a single specific evidence item with its complete payload and provenance parent links.
-    """
-    item = await EvidenceRepository.get_by_id(db, evidence_id)
-    if not item:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Evidence item '{evidence_id}' not found."
-        )
-
-    return EvidenceItemResponse(
-        id=item.id,
-        case_id=item.case_id,
-        trace_id=item.trace_id,
-        evidence_type=item.evidence_type,
-        classification=item.classification,
-        title=item.title,
-        description=item.description,
-        source=item.source,
-        source_reference=item.source_reference,
-        payload=item.payload or {},
-        parent_evidence_ids=item.parent_evidence_ids or [],
-        content_hash=item.content_hash,
-        engine_version=item.engine_version,
-        configuration_snapshot=item.configuration_snapshot,
-        collected_at=item.collected_at,
-        analysis_timestamp=item.analysis_timestamp,
-        created_at=item.created_at,
-    )
-
-
 @router.post("/cases/{case_id}/audit", response_model=AuditEventResponse, status_code=status.HTTP_201_CREATED)
 async def record_audit_event(
     case_id: str,
@@ -335,6 +248,7 @@ async def review_attribution_hypothesis(
     audit_domain = AuditEvent(
         id=event_id,
         case_id=case_id,
+        trace_id=review_in.trace_id,
         actor_id=review_in.actor_id,
         event_type=event_type,
         action_summary=action_desc,
