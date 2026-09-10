@@ -169,9 +169,9 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
       {/* Tab Content Area */}
       <div className="flex-1 w-full max-w-[1440px] mx-auto p-4 sm:p-6 overflow-hidden flex flex-col">
         {activeTab === 'graph' && (
-          <div className="flex-1 flex gap-4 h-[calc(100vh-220px)] overflow-hidden">
-            {/* Left 70% */}
-            <div className="w-[70%] bg-surface-default border border-surface-200 rounded flex flex-col overflow-hidden shadow-sm">
+          <div className="flex-1 flex flex-col lg:flex-row gap-4 h-[calc(100vh-220px)] overflow-hidden">
+            {/* Graph Canvas */}
+            <div className="w-full lg:w-[68%] h-[55%] lg:h-full bg-surface-default border border-surface-200 rounded flex flex-col overflow-hidden shadow-sm">
               <div className="px-4 py-3 border-b border-surface-200 flex justify-between items-center bg-surface-50">
                 <div className="flex items-center gap-3">
                   <h3 className="font-semibold text-lg text-surface-800">Forensic Transaction Graph</h3>
@@ -194,8 +194,8 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                 )}
               </div>
             </div>
-            {/* Right 30% */}
-            <div className="w-[30%] bg-surface-default border border-surface-200 rounded flex flex-col shadow-sm overflow-y-auto">
+            {/* Detail Drawer */}
+            <div className="w-full lg:w-[32%] h-[45%] lg:h-full bg-surface-default border border-surface-200 rounded flex flex-col shadow-sm overflow-y-auto">
                <GraphDetailDrawer
                   selectedNode={selectedNode}
                   selectedEdge={selectedEdge}
