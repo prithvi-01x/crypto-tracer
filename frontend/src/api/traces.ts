@@ -1,4 +1,5 @@
 import type { InvestigationGraph, TraceCreateInput, TraceStatus } from '../types/graph';
+import type { AttributionResponse } from '../types/attribution';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -54,7 +55,7 @@ export async function getTracesByCase(caseId: string): Promise<TraceStatus[]> {
   return response.json();
 }
 
-export async function getTraceAttribution(traceId: string): Promise<any> {
+export async function getTraceAttribution(traceId: string): Promise<AttributionResponse> {
   const response = await fetch(`${API_BASE}/traces/${traceId}/attribution`);
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

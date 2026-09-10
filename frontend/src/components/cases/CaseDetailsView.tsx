@@ -5,7 +5,8 @@ import {
   PlusCircle
 } from 'lucide-react';
 import type { CaseItem } from '../../types/case';
-import type { InvestigationGraph, TraceStatus, GraphNode, GraphEdge}  from '../../types/graph';
+import type { InvestigationGraph, TraceStatus, GraphNode, GraphEdge } from '../../types/graph';
+import type { AttributionResponse } from '../../types/attribution';
 import { getCaseById } from '../../api/cases';
 import { getTracesByCase, getTraceGraph, getTraceAttribution } from '../../api/traces';
 import { InvestigationGraphCanvas } from '../graph/InvestigationGraphCanvas';
@@ -24,7 +25,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   const [_traces, setTraces] = useState<TraceStatus[]>([]);
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const [graph, setGraph] = useState<InvestigationGraph | null>(null);
-  const [attribution, setAttribution] = useState<any | null>(null);
+  const [attribution, setAttribution] = useState<AttributionResponse | null>(null);
 
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);

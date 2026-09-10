@@ -12,10 +12,11 @@ import {
   Check
 } from 'lucide-react';
 import type { ReportItem } from '../../types/reports';
+import type { CaseItem } from '../../types/case';
 import { generateEvidenceDossier, generateBNSS94Draft, getCaseReports } from '../../api/reports';
 
 interface ReportsViewProps {
-  caseData: any;
+  caseData: CaseItem | null;
   traceId?: string | null;
 }
 

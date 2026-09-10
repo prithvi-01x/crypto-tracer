@@ -6,54 +6,16 @@ import {
   CheckCircle2,
   ListChecks
 } from 'lucide-react';
-
-interface AttributionFactors {
-  direct_tag?: number;
-  downstream_vasp_match?: number;
-  sweep?: number;
-  fan_in?: number;
-  temporal?: number;
-}
-
-interface AttributionExplanations {
-  direct_tag?: string;
-  downstream_vasp_match?: string;
-  sweep?: string;
-  fan_in?: string;
-  temporal?: string;
-}
-
-interface CandidateData {
-  candidate_address: string;
-  vasp: string;
-  vasp_name: string;
-  vasp_id: string;
-  hypothesis_label: string;
-  confidence: number;
-  confidence_percentage: number;
-  confidence_band: string;
-  verification_status: string;
-  factors?: AttributionFactors;
-  explanations?: AttributionExplanations;
-  evidence_bullet_points?: string[];
-}
-
-interface AttributionResponseData {
-  trace_id?: string;
-  engine_version?: string;
-  disclaimer?: string;
-  candidates?: CandidateData[];
-  best_candidate?: CandidateData | null;
-  meta?: Record<string, any>;
-}
+import type { AttributionResponse } from '../../types/attribution';
+import type { CaseItem } from '../../types/case';
 
 interface VaspAttributionBannerProps {
-  attribution: AttributionResponseData | null;
+  attribution: AttributionResponse | null;
   loading?: boolean;
   onNavigateToEvidence?: () => void;
   onOpenReportModal?: () => void;
   executionMode?: 'DEMO' | 'LIVE' | string;
-  caseData?: any;
+  caseData?: CaseItem | null;
 }
 
 export const VaspAttributionBanner: React.FC<VaspAttributionBannerProps> = ({
