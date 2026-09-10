@@ -40,6 +40,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const [showLabels, setShowLabels] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
   });
@@ -642,6 +643,12 @@ ${recAmount}` : ''}`;
       }
     });
 
+    // Sync zoom level with Cytoscape viewport changes (scroll wheel, touch pinch, programmatic zoom)
+    cy.on('zoom', () => {
+      setZoomLevel(cy.zoom());
+    });
+    setZoomLevel(cy.zoom());
+
     cyRef.current = cy;
 
     return () => {
@@ -708,6 +715,18 @@ ${recAmount}` : ''}`;
   const handleZoomOut = useCallback(() => {
     if (!cyRef.current) return;
     cyRef.current.zoom(cyRef.current.zoom() * 0.7);
+  }, []);
+
+  const handleZoomSliderChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setZoomLevel(val);
+    const cy = cyRef.current;
+    if (cy) {
+      cy.zoom({
+        level: val,
+        renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 },
+      });
+    }
   }, []);
 
   const handleFit = useCallback(() => {
@@ -825,22 +844,46 @@ ${recAmount}` : ''}`;
             <div className="w-full h-px bg-surface-200 dark:bg-surface-300 my-0.5" />
           </>
         )}
-        <button
-          onClick={handleZoomIn}
-          className="p-2 rounded hover:bg-surface-100 dark:hover:bg-surface-200 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition"
-          title="Zoom In"
-          aria-label="Zoom In"
-        >
-          <ZoomIn className="h-4.5 w-4.5" />
-        </button>
-        <button
-          onClick={handleZoomOut}
-          className="p-2 rounded hover:bg-surface-100 dark:hover:bg-surface-200 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition"
-          title="Zoom Out"
-          aria-label="Zoom Out"
-        >
-          <ZoomOut className="h-4.5 w-4.5" />
-        </button>
+        {/* Vertical Zoom Control Group with Slider */}
+        <div className="flex flex-col items-center gap-0.5">
+          <button
+            onClick={handleZoomIn}
+            className="p-2 rounded hover:bg-surface-100 dark:hover:bg-surface-200 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition"
+            title="Zoom In"
+            aria-label="Zoom In"
+          >
+            <ZoomIn className="h-4.5 w-4.5" />
+          </button>
+          <div 
+            className="flex items-center justify-center my-0.5 py-1 px-0.5 rounded hover:bg-surface-100/60 dark:hover:bg-surface-200/60 transition"
+            title={`Canvas Zoom: ${Math.round(zoomLevel * 100)}% (Drag vertical slider)`}
+          >
+            <input
+              type="range"
+              min="0.2"
+              max="2.5"
+              step="0.05"
+              value={Math.min(2.5, Math.max(0.2, zoomLevel))}
+              onChange={handleZoomSliderChange}
+              style={{
+                writingMode: 'vertical-lr',
+                direction: 'rtl',
+                height: '60px',
+                width: '12px',
+              }}
+              className="cursor-pointer accent-reactor-orange bg-surface-200 dark:bg-surface-400 rounded appearance-none"
+              aria-label="Canvas Vertical Zoom Slider"
+            />
+          </div>
+          <button
+            onClick={handleZoomOut}
+            className="p-2 rounded hover:bg-surface-100 dark:hover:bg-surface-200 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition"
+            title="Zoom Out"
+            aria-label="Zoom Out"
+          >
+            <ZoomOut className="h-4.5 w-4.5" />
+          </button>
+        </div>
         <button
           onClick={handleFit}
           className="p-2 rounded hover:bg-surface-100 dark:hover:bg-surface-200 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition"

@@ -18,6 +18,7 @@ import {
   Maximize2,
   Minimize2,
   GripVertical,
+  GripHorizontal,
   Sliders
 } from 'lucide-react';
 import type { CaseItem } from '../../types/case';
@@ -102,6 +103,34 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
 
     const onPointerUp = () => {
       setIsDraggingSplitter(false);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  }, []);
+
+  const [graphHeightPx, setGraphHeightPx] = useState<number | null>(null);
+  const [isDraggingHeightSplitter, setIsDraggingHeightSplitter] = useState<boolean>(false);
+
+  // Drag handler for dynamic vertical height splitter
+  const handleHeightSplitterPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDraggingHeightSplitter(true);
+    const startY = e.clientY;
+    const initialHeight = splitContainerRef.current?.getBoundingClientRect().height || 700;
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      const deltaY = moveEvent.clientY - startY;
+      let newHeight = Math.round(initialHeight + deltaY);
+      if (newHeight < 400) newHeight = 400;
+      if (newHeight > 1400) newHeight = 1400;
+      setGraphHeightPx(newHeight);
+    };
+
+    const onPointerUp = () => {
+      setIsDraggingHeightSplitter(false);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
     };
@@ -448,9 +477,19 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
       </div>
 
       {/* Tab Content Area */}
-      <div className="flex-1 w-full max-w-[98vw] 2xl:max-w-[2100px] mx-auto px-2 sm:px-4 py-1 sm:py-2 overflow-hidden flex flex-col">
+      <div className="flex-1 w-full max-w-[98vw] 2xl:max-w-[2100px] mx-auto px-2 sm:px-4 py-1 sm:py-2 overflow-y-auto lg:overflow-y-auto flex flex-col">
         {activeTab === 'graph' && (
-          <div className="flex-1 flex flex-col gap-2 h-[calc(100vh-130px)] overflow-hidden">
+          <div 
+            style={{
+              height: isGraphMaximized
+                ? 'calc(100vh - 130px)'
+                : graphHeightPx
+                  ? `${graphHeightPx}px`
+                  : 'calc(100vh - 130px)',
+              minHeight: '420px',
+            }}
+            className="flex-1 flex flex-col gap-2 overflow-hidden transition-[height] duration-150"
+          >
             {/* Reactor Trace Stats Strip */}
             {graph?.meta && (
               <TraceStatsBar
@@ -465,7 +504,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
               ref={splitContainerRef}
               className={`flex-1 flex flex-col lg:flex-row gap-0 min-h-0 overflow-hidden ${
                 isDraggingSplitter ? 'select-none cursor-col-resize' : ''
-              }`}
+              } ${isDraggingHeightSplitter ? 'select-none cursor-row-resize' : ''}`}
             >
               {/* Graph Canvas Container */}
               <div 
@@ -531,6 +570,36 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                         <span className="font-mono text-[11px] font-bold text-surface-800 dark:text-surface-100 w-8 text-right">
                           {isGraphMaximized ? '100%' : `${graphWidthPercent}%`}
                         </span>
+                      </div>
+                    )}
+                    {/* Dynamic Canvas Height Slider Option */}
+                    {graph && (
+                      <div 
+                        className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded text-xs font-semibold border border-surface-200 bg-surface-default text-surface-700 dark:text-surface-200 shadow-2xs"
+                        title={`Adjust Canvas Height: ${graphHeightPx ? `${graphHeightPx}px` : 'Auto (Fit Viewport)'} • Click value to reset`}
+                      >
+                        <Sliders className="h-3.5 w-3.5 text-reactor-orange rotate-90" />
+                        <span className="text-[10px] uppercase font-bold text-surface-500">Height</span>
+                        <input
+                          type="range"
+                          min={450}
+                          max={1200}
+                          step={25}
+                          value={graphHeightPx || 720}
+                          onChange={(e) => {
+                            setGraphHeightPx(Number(e.target.value));
+                          }}
+                          className="w-16 sm:w-20 md:w-24 h-1.5 bg-surface-200 dark:bg-surface-300 rounded-lg appearance-none cursor-pointer accent-reactor-orange"
+                          aria-label="Canvas Height Slider"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setGraphHeightPx(null)}
+                          className="font-mono text-[11px] font-bold text-surface-800 dark:text-surface-100 hover:text-reactor-orange transition cursor-pointer"
+                          title="Click to reset height to Auto"
+                        >
+                          {graphHeightPx ? `${graphHeightPx}px` : 'Auto'}
+                        </button>
                       </div>
                     )}
                     {graph && (
@@ -879,6 +948,21 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                 )}
               </div>
             </div>
+
+            {/* Draggable Bottom Height Handle */}
+            {!isGraphMaximized && (
+              <div
+                onPointerDown={handleHeightSplitterPointerDown}
+                onDoubleClick={() => setGraphHeightPx(null)}
+                className="w-full h-2.5 flex items-center justify-center cursor-row-resize z-20 group relative hover:bg-reactor-orange/10 active:bg-reactor-orange/20 transition-colors select-none shrink-0"
+                title="Drag up/down to adjust canvas height • Double-click to reset (Auto)"
+                aria-label="Resize Graph Canvas Height Splitter"
+              >
+                <div className="h-1 w-20 rounded-full bg-surface-300 dark:bg-surface-400 group-hover:bg-reactor-orange group-active:bg-reactor-orange transition-colors flex items-center justify-center">
+                  <GripHorizontal className="h-3 w-3 text-surface-600 dark:text-surface-200 opacity-40 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
