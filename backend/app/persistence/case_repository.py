@@ -81,3 +81,13 @@ class CaseRepository:
         await session.refresh(case)
         return case
 
+    @staticmethod
+    async def delete(session: AsyncSession, case_id: str) -> bool:
+        case = await CaseRepository.get_by_id(session, case_id)
+        if not case:
+            return False
+        await session.delete(case)
+        await session.commit()
+        return True
+
+

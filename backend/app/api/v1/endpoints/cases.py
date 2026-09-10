@@ -250,3 +250,20 @@ async def list_traces_for_case(
             )
         )
     return results
+
+
+@router.delete("/{case_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_case(
+    case_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete an investigation case and all cascaded records (traces, evidence, audit logs).
+    """
+    deleted = await CaseRepository.delete(db, case_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Investigation case '{case_id}' not found."
+        )
+
