@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import cytoscape, { type Core, type EventObject } from 'cytoscape';
+import cytoscape from 'cytoscape';
+import type { Core, EventObject } from 'cytoscape';
 import { 
   ZoomIn, 
   ZoomOut, 
@@ -7,9 +8,8 @@ import {
   RotateCcw, 
   Crosshair, 
   Tag, 
-  Info, 
-  Layers,
-  AlertTriangle
+  Info,
+  Layers
 } from 'lucide-react';
 import type { InvestigationGraph, GraphNode, GraphEdge } from '../../types/graph';
 
@@ -30,20 +30,22 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
-  const [showLabels, setShowLabels] = useState<boolean>(true);
+  const [showLabels, setShowLabels] = useState(true);
 
-  // Shorten wallet address for visual node badges
+  // Helper to format short address
   const shortAddr = (addr: string) => {
     if (!addr) return '';
-    if (addr.length <= 12) return addr;
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    return `${addr.slice(0, 5)}...${addr.slice(-4)}`;
   };
 
-  // Format amount for display
+  // Helper to format currency
   const formatAmount = (val: number | string) => {
-    const num = Number(val);
-    if (isNaN(num)) return `${val} USDT`;
-    return `${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num)) return `$${val}`;
+    if (num >= 1000) {
+      return `$${(num / 1000).toFixed(1)}k`;
+    }
+    return `$${num.toFixed(2)}`;
   };
 
   // Highlight path from root suspect to given target node
@@ -95,12 +97,6 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       let labelText = `${shortAddr(n.address)}`;
       if (n.node_type === 'suspect') {
         labelText = `🚨 SUSPECT\n${shortAddr(n.address)}`;
-      } else if (n.node_type === 'mixer') {
-        labelText = `⚠️ MIXER\n${shortAddr(n.address)}`;
-      } else if (n.node_type === 'bridge') {
-        labelText = `🌉 BRIDGE\n${shortAddr(n.address)}`;
-      } else if (n.node_type === 'vasp') {
-        labelText = `🏦 VASP\n${shortAddr(n.address)}`;
       } else if (n.node_type === 'endpoint') {
         labelText = `🎯 ENDPOINT\n${shortAddr(n.address)}`;
       } else {
@@ -207,39 +203,6 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
             'height': 40,
           },
         },
-        // Mixer Node (High-Risk Obfuscation - Purple)
-        {
-          selector: 'node[type = "mixer"]',
-          style: {
-            'background-color': '#581c87',
-            'border-color': '#c084fc',
-            'border-width': 3.5,
-            'width': 44,
-            'height': 44,
-          },
-        },
-        // Bridge Node (Cross-Chain Gateway - Teal)
-        {
-          selector: 'node[type = "bridge"]',
-          style: {
-            'background-color': '#134e4a',
-            'border-color': '#2dd4bf',
-            'border-width': 3.5,
-            'width': 44,
-            'height': 44,
-          },
-        },
-        // VASP Node (Exchange Endpoint - Amber)
-        {
-          selector: 'node[type = "vasp"]',
-          style: {
-            'background-color': '#78350f',
-            'border-color': '#f59e0b',
-            'border-width': 3.5,
-            'width': 44,
-            'height': 44,
-          },
-        },
         // Edges Base
         {
           selector: 'edge',
@@ -313,7 +276,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       layout: {
         name: 'breadthfirst',
         directed: true,
-        roots: rootSuspectAddress ? [rootSuspectAddress] : undefined,
+        roots: (rootSuspectAddress ? `[id = "${rootSuspectAddress}"]` : undefined) as any,
         padding: 50,
         spacingFactor: 1.6,
         animate: false,
@@ -400,7 +363,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
     cyRef.current.layout({
       name: 'breadthfirst',
       directed: true,
-      roots: rootAddr ? [rootAddr] : undefined,
+      roots: (rootAddr ? `[id = "${rootAddr}"]` : undefined) as any,
       padding: 50,
       spacingFactor: 1.6,
       animate: true,
@@ -410,10 +373,10 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
 
   if (!graph || graph.nodes.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-12 bg-police-950/60 border border-police-700/60 rounded-xl space-y-3 text-slate-400">
-        <Layers className="h-10 w-10 text-slate-600 animate-pulse" />
-        <p className="text-sm font-semibold text-slate-300">No Graph Data Available</p>
-        <p className="text-xs text-slate-500 max-w-sm text-center">
+      <div className="flex-1 flex flex-col items-center justify-center p-12 bg-police-950/60 border border-police-700/60 rounded-xl space-y-3 text-surface-400">
+        <Layers className="h-10 w-10 text-surface-600 animate-pulse" />
+        <p className="text-lg font-semibold text-surface-300">No Graph Data Available</p>
+        <p className="text-base text-surface-500 max-w-sm text-center">
           Run an automated multi-hop trace to visualize the money trail from suspect to VASP endpoints.
         </p>
       </div>
@@ -428,73 +391,47 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       {/* Visual Canvas */}
       <div ref={containerRef} className="flex-1 w-full h-full cursor-grab active:cursor-grabbing" />
 
-      {/* Boundary / Operational alert banner */}
-      {graph.meta.boundary_reached ? (
-        <div className={`absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-lg border text-xs flex items-center gap-2.5 shadow-xl backdrop-blur max-w-[85%] z-20 ${
-          graph.meta.boundary_reached === 'MIXER_BOUNDARY'
-            ? 'bg-purple-950/95 border-purple-500 text-purple-200'
-            : graph.meta.boundary_reached === 'BRIDGE_BOUNDARY'
-            ? 'bg-teal-950/95 border-teal-500 text-teal-200'
-            : graph.meta.boundary_reached === 'MAX_HOPS_REACHED'
-            ? 'bg-slate-900/95 border-slate-700 text-slate-300'
-            : 'bg-amber-950/95 border-amber-600 text-amber-200'
-        }`}>
-          <AlertTriangle className={`h-4 w-4 shrink-0 ${
-            graph.meta.boundary_reached === 'MIXER_BOUNDARY' ? 'text-purple-400' :
-            graph.meta.boundary_reached === 'BRIDGE_BOUNDARY' ? 'text-teal-400' : 'text-amber-400'
-          }`} />
-          <span className="font-mono font-bold tracking-wide">
-            [{graph.meta.boundary_reached}]
-          </span>
-          <span>
-            {graph.meta.investigator_explanation ||
-             (graph.meta.boundary_reached === 'MIXER_BOUNDARY'
-               ? 'High-risk obfuscation service (Mixer) encountered. Traversal halted at mixer boundary per anti-de-anonymization policy.'
-               : graph.meta.boundary_reached === 'BRIDGE_BOUNDARY'
-               ? 'Cross-chain bridge gateway encountered. Single-chain TRON traversal terminated.'
-               : `Operational boundary: ${graph.meta.boundary_reached}`)}
-          </span>
-        </div>
-      ) : isSingleNode ? (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-amber-950/90 border border-amber-800 text-amber-200 text-xs flex items-center gap-2 shadow-lg backdrop-blur z-20">
+      {/* Single node / 0 transfer notice banner */}
+      {isSingleNode && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-amber-950/90 border border-amber-800 text-amber-200 text-base flex items-center gap-2 shadow-lg backdrop-blur">
           <Info className="h-4 w-4 text-amber-400 shrink-0" />
           <span>Root suspect wallet has 0 relevant outgoing transfers matching current threshold (&gt;= ${graph.meta.min_relevant_usd}).</span>
         </div>
-      ) : null}
+      )}
 
       {/* Floating Toolbar */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-1.5 p-1 rounded-lg bg-police-900/90 border border-police-700/80 shadow-lg backdrop-blur">
         <button
           onClick={handleZoomIn}
-          className="p-2 rounded hover:bg-police-800 text-slate-300 hover:text-white transition"
+          className="p-2 rounded hover:bg-police-800 text-surface-300 hover:text-white transition"
           title="Zoom In"
         >
           <ZoomIn className="h-4 w-4" />
         </button>
         <button
           onClick={handleZoomOut}
-          className="p-2 rounded hover:bg-police-800 text-slate-300 hover:text-white transition"
+          className="p-2 rounded hover:bg-police-800 text-surface-300 hover:text-white transition"
           title="Zoom Out"
         >
           <ZoomOut className="h-4 w-4" />
         </button>
         <button
           onClick={handleFit}
-          className="p-2 rounded hover:bg-police-800 text-slate-300 hover:text-white transition"
+          className="p-2 rounded hover:bg-police-800 text-surface-300 hover:text-white transition"
           title="Fit to Screen"
         >
           <Maximize2 className="h-4 w-4" />
         </button>
         <button
           onClick={handleCenterRoot}
-          className="p-2 rounded hover:bg-police-800 text-slate-300 hover:text-white transition"
+          className="p-2 rounded hover:bg-police-800 text-surface-300 hover:text-white transition"
           title="Center on Root Suspect"
         >
           <Crosshair className="h-4 w-4" />
         </button>
         <button
           onClick={handleResetLayout}
-          className="p-2 rounded hover:bg-police-800 text-slate-300 hover:text-white transition"
+          className="p-2 rounded hover:bg-police-800 text-surface-300 hover:text-white transition"
           title="Re-run Directed Layout"
         >
           <RotateCcw className="h-4 w-4" />
@@ -502,7 +439,7 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
         <button
           onClick={() => setShowLabels(!showLabels)}
           className={`p-2 rounded transition ${
-            showLabels ? 'text-blue-400 bg-blue-950/40' : 'text-slate-400 hover:bg-police-800'
+            showLabels ? 'text-brand-blue bg-blue-950/40' : 'text-surface-400 hover:bg-police-800'
           }`}
           title={showLabels ? 'Hide Amount Labels' : 'Show Amount Labels'}
         >
@@ -511,29 +448,21 @@ export const InvestigationGraphCanvas: React.FC<InvestigationGraphCanvasProps> =
       </div>
 
       {/* Legend Badge */}
-      <div className="absolute bottom-4 left-4 z-10 p-2.5 rounded-lg bg-police-900/90 border border-police-700/80 shadow-lg backdrop-blur flex flex-wrap items-center gap-3 text-[11px]">
+      <div className="absolute bottom-4 left-4 z-10 p-2.5 rounded-lg bg-police-900/90 border border-police-700/80 shadow-lg backdrop-blur flex items-center gap-3 text-base">
         <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-red-600 border border-red-400" />
-          <span className="text-slate-300 font-semibold">Suspect</span>
+          <span className="h-4 w-4 rounded-full bg-red-600 border border-red-400" />
+          <span className="text-surface-300 font-semibold">Suspect</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-sky-600 border border-sky-400" />
-          <span className="text-slate-300 font-semibold">Intermediate</span>
+          <span className="h-4 w-4 rounded-full bg-sky-600 border border-sky-400" />
+          <span className="text-surface-300 font-semibold">Intermediate</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-emerald-600 border border-emerald-400" />
-          <span className="text-slate-300 font-semibold">Endpoint</span>
+          <span className="h-4 w-4 rounded-full bg-emerald-600 border border-emerald-400" />
+          <span className="text-surface-300 font-semibold">Endpoint / Deposit</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-purple-700 border border-purple-400" />
-          <span className="text-purple-300 font-semibold">Mixer</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-teal-700 border border-teal-400" />
-          <span className="text-teal-300 font-semibold">Bridge</span>
-        </div>
-        <div className="flex items-center gap-1 text-slate-400 pl-1 border-l border-police-700">
-          <span>Click any element to inspect</span>
+        <div className="flex items-center gap-1 text-surface-400 pl-1 border-l border-police-700">
+          <span>Click any node or edge to inspect & highlight path</span>
         </div>
       </div>
     </div>

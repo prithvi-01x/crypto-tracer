@@ -58,20 +58,20 @@ export const PruningDrawer: React.FC<PruningDrawerProps> = ({
               <FilterX className="h-4 w-4 text-purple-400" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <h2 className="text-lg font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 Forensic Pruning Audit Log
-                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-900/60 text-purple-200 border border-purple-700">
+                <span className="text-base px-2 py-0.5 rounded-full bg-purple-900/60 text-purple-200 border border-purple-700">
                   {records.length} Filtered
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-base text-surface-400">
                 Transparent accounting of low-value and non-relevant blockchain noise
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-police-800 transition"
+            className="p-1.5 rounded-lg text-surface-400 hover:text-white hover:bg-police-800 transition"
           >
             <X className="h-5 w-5" />
           </button>
@@ -80,38 +80,38 @@ export const PruningDrawer: React.FC<PruningDrawerProps> = ({
         {/* Breakdown Stats */}
         <div className="p-4 border-b border-police-800 grid grid-cols-3 gap-3 bg-police-850">
           <div className="p-2.5 rounded-lg bg-police-800/80 border border-police-700/60">
-            <div className="text-[10px] text-slate-400 font-semibold uppercase">Dust Filtered</div>
-            <div className="text-base font-bold font-mono text-purple-300 mt-0.5">{dustCount}</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">&lt; ${minThreshold.toFixed(2)} USDT</div>
+            <div className="text-sm text-surface-400 font-semibold uppercase">Dust Filtered</div>
+            <div className="text-xl font-bold font-mono text-purple-300 mt-0.5">{dustCount}</div>
+            <div className="text-sm text-surface-500 mt-0.5">&lt; ${minThreshold.toFixed(2)} USDT</div>
           </div>
           <div className="p-2.5 rounded-lg bg-police-800/80 border border-police-700/60">
-            <div className="text-[10px] text-slate-400 font-semibold uppercase">Branch Width Exceeded</div>
-            <div className="text-base font-bold font-mono text-amber-300 mt-0.5">{branchCount}</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">Ranked beyond max branch</div>
+            <div className="text-sm text-surface-400 font-semibold uppercase">Branch Width Exceeded</div>
+            <div className="text-xl font-bold font-mono text-amber-300 mt-0.5">{branchCount}</div>
+            <div className="text-sm text-surface-500 mt-0.5">Ranked beyond max branch</div>
           </div>
           <div className="p-2.5 rounded-lg bg-police-800/80 border border-police-700/60">
-            <div className="text-[10px] text-slate-400 font-semibold uppercase">Asset Mismatch</div>
-            <div className="text-base font-bold font-mono text-blue-300 mt-0.5">{assetMismatchCount}</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">Non-USDT tokens</div>
+            <div className="text-sm text-surface-400 font-semibold uppercase">Asset Mismatch</div>
+            <div className="text-xl font-bold font-mono text-blue-300 mt-0.5">{assetMismatchCount}</div>
+            <div className="text-sm text-surface-500 mt-0.5">Non-USDT tokens</div>
           </div>
         </div>
 
         {/* Legal Evidence Banner */}
-        <div className="px-4 py-2.5 bg-blue-950/30 border-b border-blue-900/40 flex items-center gap-2 text-xs text-blue-300">
-          <ShieldCheck className="h-4 w-4 text-blue-400 shrink-0" />
+        <div className="px-4 py-2.5 bg-blue-950/30 border-b border-blue-900/40 flex items-center gap-2 text-base text-blue-300">
+          <ShieldCheck className="h-4 w-4 text-brand-blue shrink-0" />
           <span>Section 63 BSA compliance: Pruned records retained for forensic reproducibility.</span>
         </div>
 
         {/* Search Input */}
         <div className="p-3 border-b border-police-800 bg-police-900">
           <div className="relative">
-            <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="h-4 w-4 text-surface-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search by transaction hash, wallet address or reason..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-police-800 border border-police-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              className="w-full pl-9 pr-3 py-1.5 text-base bg-police-800 border border-police-700 rounded-lg text-surface-200 placeholder-surface-400 focus:outline-none focus:border-brand-blue"
             />
           </div>
         </div>
@@ -119,31 +119,31 @@ export const PruningDrawer: React.FC<PruningDrawerProps> = ({
         {/* Records Table / List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2.5 divide-y divide-police-800/50">
           {filteredRecords.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 space-y-2">
-              <AlertTriangle className="h-8 w-8 text-slate-600 mx-auto" />
-              <p className="text-xs">No pruned transaction records matched your search filter.</p>
+            <div className="p-8 text-center text-surface-400 space-y-2">
+              <AlertTriangle className="h-8 w-8 text-surface-600 mx-auto" />
+              <p className="text-base">No pruned transaction records matched your search filter.</p>
             </div>
           ) : (
             filteredRecords.map((r, i) => (
-              <div key={`${r.tx_hash}-${i}`} className="pt-2.5 text-xs space-y-1.5">
+              <div key={`${r.tx_hash}-${i}`} className="pt-2.5 text-base space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-slate-300 font-medium">
+                    <span className="font-mono text-surface-300 font-medium">
                       {r.tx_hash.slice(0, 10)}...{r.tx_hash.slice(-8)}
                     </span>
                     <button
                       onClick={() => copyToClipboard(r.tx_hash, `tx-${i}`)}
-                      className="text-slate-500 hover:text-slate-300 transition"
+                      className="text-surface-500 hover:text-slate-300 transition"
                       title="Copy Tx Hash"
                     >
-                      {copiedHash === `tx-${i}` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      {copiedHash === `tx-${i}` ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
                     </button>
-                    <span className="px-1.5 py-0.2 text-[9px] font-mono rounded bg-police-800 text-slate-400 border border-police-700">
+                    <span className="px-1.5 py-0.2 text-sm font-mono rounded bg-police-800 text-surface-400 border border-police-700">
                       Hop {r.hop}
                     </span>
                   </div>
 
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                  <span className={`px-2 py-0.5 rounded text-sm font-semibold uppercase ${
                     r.reason === 'DUST' 
                       ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
                       : r.reason === 'BRANCH_LIMIT_EXCEEDED'
@@ -154,18 +154,18 @@ export const PruningDrawer: React.FC<PruningDrawerProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-slate-400 text-[11px] font-mono">
+                <div className="flex items-center justify-between text-surface-400 text-base font-mono">
                   <div className="flex items-center gap-1.5">
                     <span>{r.from_address.slice(0, 6)}...{r.from_address.slice(-4)}</span>
-                    <ArrowRight className="h-3 w-3 text-slate-600" />
+                    <ArrowRight className="h-4 w-4 text-surface-600" />
                     <span>{r.to_address.slice(0, 6)}...{r.to_address.slice(-4)}</span>
                   </div>
-                  <div className="font-bold text-slate-200">
+                  <div className="font-bold text-surface-200">
                     {typeof r.amount === 'number' ? r.amount.toFixed(4) : r.amount} USDT
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
+                <div className="flex items-center justify-between text-sm text-surface-500 pt-0.5">
                   <span>Threshold applied: {typeof r.threshold === 'number' ? r.threshold.toFixed(2) : r.threshold}</span>
                   <span>{new Date(r.timestamp).toLocaleString()} • {r.source}</span>
                 </div>
@@ -178,7 +178,7 @@ export const PruningDrawer: React.FC<PruningDrawerProps> = ({
         <div className="p-3 border-t border-police-800 bg-police-850 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-police-700 hover:bg-police-600 text-xs font-semibold text-white transition"
+            className="px-4 py-1.5 rounded-lg bg-police-700 hover:bg-police-600 text-base font-semibold text-white transition"
           >
             Close Audit Log
           </button>
