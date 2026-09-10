@@ -36,7 +36,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
     setVictimReference('RAMESH-001 (Ramesh Kumar)');
     setLossAmountInr('500000');
     setAckNumber('1930-DL-2026-812');
-    setSuspectWallet('TYDZSxdBzWnCuB4jF3K6j5X3qW7b9X1234');
+    setSuspectWallet('TSuspectScamRootWallet111111111111');
     setChain('TRON');
     setAsset('TRC20:USDT');
     setNotes('Victim contacted via Telegram "VIP Investment Club". Transferred ₹5,00,000 via local P2P/UPI converted to 5,500 USDT sent to suspect unhosted TRON wallet.');

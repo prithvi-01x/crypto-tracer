@@ -70,22 +70,25 @@ async def start_trace(
         )
 
     clean_input = trace_in.input.strip()
-    if trace_in.input_type == "address":
-        if not validate_tron_address(clean_input):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "code": "INVALID_ADDRESS",
-                    "message": f"Invalid TRON address format: '{clean_input}'. Expected 34-character Base58Check starting with 'T'.",
-                }
-            )
 
-    # 3. Determine execution mode (DEMO vs LIVE)
+    # 3. Determine execution mode & validate address format
     requested_mode = getattr(trace_in, "execution_mode", "DEMO").upper()
-    if is_canonical_demo_address(clean_input):
+    is_canonical = is_canonical_demo_address(clean_input)
+
+    if is_canonical and requested_mode == "DEMO":
         resolved_mode = "DEMO"
     else:
-        resolved_mode = "DEMO" if requested_mode == "DEMO" else "LIVE"
+        # Standard TRON Base58 validation applies to LIVE/non-demo addresses
+        if trace_in.input_type == "address":
+            if not validate_tron_address(clean_input):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "INVALID_ADDRESS",
+                        "message": f"Invalid TRON address format: '{clean_input}'. Expected 34-character Base58Check starting with 'T'.",
+                    }
+                )
+        resolved_mode = "DEMO" if (is_canonical or requested_mode == "DEMO") else "LIVE"
 
     # Create initial trace record in PostgreSQL
     trace_record = await TraceRepository.create(

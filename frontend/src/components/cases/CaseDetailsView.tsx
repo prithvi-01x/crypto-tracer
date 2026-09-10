@@ -570,7 +570,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                           </label>
                           <button
                             type="button"
-                            onClick={() => setTraceWalletInput('TYDZSxdBzWnCuB4jF3K6j5X3qW7b9X1234')}
+                            onClick={() => setTraceWalletInput('TSuspectScamRootWallet111111111111')}
                             className="text-[11px] font-medium text-brand-blue dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <Sparkles className="h-3 w-3" />
@@ -581,7 +581,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                           type="text"
                           value={traceWalletInput}
                           onChange={(e) => setTraceWalletInput(e.target.value.trim())}
-                          placeholder="e.g. TYDZSxdBzWnCuB4jF3K6j5X3qW7b9X1234"
+                          placeholder="e.g. TSuspectScamRootWallet111111111111"
                           className="w-full px-3 py-2 text-xs font-mono bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 rounded-lg text-surface-800 dark:text-surface-100 focus:outline-none focus:border-reactor-orange focus:ring-1 focus:ring-reactor-orange transition"
                         />
                         <p className="text-[11px] text-surface-400">
