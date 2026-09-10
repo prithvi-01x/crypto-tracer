@@ -492,7 +492,7 @@ async def test_evidence_api_endpoints(async_client: AsyncClient, test_engine):
         json={
             "trace_id": trace_id,
             "decision": "ACCEPT",
-            "notes": "Confirmed 99.6% sweep directly into Binance hot wallet within 10 minutes. High confidence attribution approved for 91 CrPC notice preparation.",
+            "notes": "Confirmed 99.6% sweep directly into Binance hot wallet within 10 minutes. High confidence attribution approved for Section 94 BNSS notice preparation.",
             "actor_id": "IO-Rao-742",
         },
     )

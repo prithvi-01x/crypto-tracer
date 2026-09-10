@@ -202,7 +202,7 @@ export const CaseNotesModal: React.FC<CaseNotesModalProps> = ({
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {[
-                      'Section 91 CrPC notice dispatched to Binance Compliance.',
+                      'Section 94 BNSS production notice dispatched to Binance Compliance.',
                       'Section 94 BNSS preservation request served on exchange.',
                       'Suspect deposit cluster verified; freezing requested.',
                       'Mule intermediary accounts verified via local bank liaison.',

@@ -25,7 +25,7 @@ Every surveyed feature mapped to an assigned milestone:
 | 9 | Risk Indicator Pill Badges | `Exchange / VASP`, `Mule Intermediary`, `Mixer / Tumbler`, `Unhosted Suspect` with illicit red tags | M3 | ORIGINAL_REQUEST §R3, Clone Survey |
 | 10 | 2-Column Financial Summary Card | Metrics for Balance, Sent, Received, Fees, and Transaction count | M3 | ORIGINAL_REQUEST §R3, Clone Survey |
 | 11 | Transaction Interpretation Narrative | Plain-English narrative summarizing hop movements, consolidation timing, and rapid sweep velocity | M3 | ORIGINAL_REQUEST §R3, Clone Survey |
-| 12 | Entity Quick Actions | Copy address, view on TronScan, Draft Section 91 CrPC / Section 94 BNSS notices, View Findings deep-link | M3 | ORIGINAL_REQUEST §R3, Frontend Survey |
+| 12 | Entity Quick Actions | Copy address, view on TronScan, Draft Section 94 BNSS notices, View Findings deep-link | M3 | ORIGINAL_REQUEST §R3, Frontend Survey |
 | 13 | Reactor Command Header | Prominent FIR reference, victim details pill, dual currency loss display (INR & USDT), chain pill | M4 | ORIGINAL_REQUEST §R4, Clone Survey |
 | 14 | Reactor Subnav Tabs | 5 tabs with live alert counter badge on Findings, Safety Orange `#FF5300` active underline | M4 | ORIGINAL_REQUEST §R4, Clone Survey |
 | 15 | Working Quick-Action Modals | Export Dossier modal and Case Notes modal (append timestamped entry & edit full notes) | M4 | ORIGINAL_REQUEST §R4, Frontend Survey |

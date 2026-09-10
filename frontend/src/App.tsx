@@ -351,7 +351,7 @@ export default function App() {
                   </div>
                   <div className="p-3 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300">
                     <span className="font-bold text-purple-600 block mb-1">4. Evidence Vault &amp; Legal Export</span>
-                    <p className="text-surface-500 leading-relaxed">Generate Section 63 BSA certified dossiers and Section 91 CrPC notice drafts with immutable SHA-256 Merkle proofs.</p>
+                    <p className="text-surface-500 leading-relaxed">Generate Section 63 BSA certified dossiers and Section 94 BNSS notice drafts with immutable SHA-256 Merkle proofs.</p>
                   </div>
                 </div>
               </div>

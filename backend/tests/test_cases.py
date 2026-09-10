@@ -154,14 +154,14 @@ async def test_add_case_note_appends_timestamped_entry(async_client: AsyncClient
 
     # Append note
     note_payload = {
-        "note": "Section 91 CrPC notice dispatched to Binance Compliance.",
+        "note": "Section 94 BNSS production notice dispatched to Binance Compliance.",
         "author": "Insp. Vikramaditya",
     }
     note_res = await async_client.post(f"/api/v1/cases/{case_id}/notes", json=note_payload)
     assert note_res.status_code == 200
     data = note_res.json()
     assert "Existing observation 1" in data["notes"]
-    assert "Section 91 CrPC notice dispatched to Binance Compliance." in data["notes"]
+    assert "Section 94 BNSS production notice dispatched to Binance Compliance." in data["notes"]
     assert "Insp. Vikramaditya" in data["notes"]
     assert "UTC" in data["notes"]
 
