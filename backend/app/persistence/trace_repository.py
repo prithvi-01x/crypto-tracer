@@ -103,3 +103,5 @@ class TraceRepository:
         query = select(Trace).where(Trace.case_id == case_id).order_by(Trace.started_at.desc())
         result = await session.execute(query)
         return list(result.scalars().all())
+
+    get_by_case = list_by_case_id

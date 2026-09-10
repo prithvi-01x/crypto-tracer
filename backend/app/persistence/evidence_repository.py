@@ -87,3 +87,6 @@ class EvidenceRepository:
         query = select(EvidenceItemModel).where(EvidenceItemModel.id == evidence_id)
         result = await session.execute(query)
         return result.scalar_one_or_none()
+
+    get_by_trace = get_by_trace_id
+    get_by_case = get_by_case_id
