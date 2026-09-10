@@ -81,27 +81,27 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
         {/* Header */}
         <div className="px-6 py-4 border-b border-police-700 flex items-center justify-between bg-police-900/60">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-400">
+            <div className="p-2 rounded-lg bg-blue-600/20 border border-blue-500/30 text-brand-blue">
               <FilePlus className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white tracking-wide">New Crypto Investigation Intake</h2>
-              <p className="text-xs text-slate-400">Register incident metadata and target suspect wallet</p>
+              <h2 className="text-xl font-bold text-white tracking-wide">New Crypto Investigation Intake</h2>
+              <p className="text-base text-surface-400">Register incident metadata and target suspect wallet</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handlePrefillDemo}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-base font-semibold rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition"
               title="Populate with SIH demo case data"
             >
-              <Sparkles className="h-3.5 w-3.5" />
+              <Sparkles className="h-4 w-4" />
               Demo Data
             </button>
             <button
               onClick={onClose}
-              className="p-1 rounded-lg hover:bg-police-700 text-slate-400 hover:text-white transition"
+              className="p-1 rounded-lg hover:bg-police-700 text-surface-400 hover:text-white transition"
             >
               <X className="h-5 w-5" />
             </button>
@@ -110,7 +110,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
 
         {/* Error Notification */}
         {error && (
-          <div className="mx-6 mt-4 p-3 rounded-lg bg-red-950/60 border border-red-800 text-red-200 text-xs flex items-center gap-2">
+          <div className="mx-6 mt-4 p-3 rounded-lg bg-red-950/60 border border-red-800 text-red-200 text-base flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
             <span>{error}</span>
           </div>
@@ -121,7 +121,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
           {/* Section 1: Legal / Case ID */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-base font-semibold text-surface-300 uppercase tracking-wider mb-1.5">
                 FIR / Case Number <span className="text-red-400">*</span>
               </label>
               <input
@@ -130,11 +130,11 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
                 placeholder="e.g. 2026/812"
                 value={firNumber}
                 onChange={(e) => setFirNumber(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white placeholder-surface-400 text-base focus:outline-none focus:border-brand-blue font-mono"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-base font-semibold text-surface-300 uppercase tracking-wider mb-1.5">
                 1930 Portal Acknowledgement No.
               </label>
               <input
@@ -142,7 +142,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
                 placeholder="e.g. 1930-DL-2026-812"
                 value={ackNumber}
                 onChange={(e) => setAckNumber(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white placeholder-surface-400 text-base focus:outline-none focus:border-brand-blue font-mono"
               />
             </div>
           </div>
@@ -150,7 +150,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
           {/* Section 2: Victim & Financials */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-base font-semibold text-surface-300 uppercase tracking-wider mb-1.5">
                 Complainant / Victim Reference
               </label>
               <input
@@ -158,15 +158,15 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
                 placeholder="e.g. Ramesh Kumar (RAMESH-001)"
                 value={victimReference}
                 onChange={(e) => setVictimReference(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white placeholder-surface-400 text-base focus:outline-none focus:border-brand-blue"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-base font-semibold text-surface-300 uppercase tracking-wider mb-1.5">
                 Reported Loss Amount (INR)
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500 text-xs">₹</span>
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-surface-500 text-base">₹</span>
                 <input
                   type="number"
                   step="0.01"
@@ -174,7 +174,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
                   placeholder="500000.00"
                   value={lossAmountInr}
                   onChange={(e) => setLossAmountInr(e.target.value)}
-                  className="w-full pl-7 pr-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full pl-7 pr-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white placeholder-surface-400 text-base focus:outline-none focus:border-brand-blue font-mono"
                 />
               </div>
             </div>
@@ -182,11 +182,11 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
 
           {/* Section 3: Target Wallet & Chain */}
           <div className="pt-2 border-t border-police-700/60">
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label className="block text-base font-semibold text-surface-300 uppercase tracking-wider mb-1.5">
               Suspect Cryptocurrency Wallet Address or Transaction ID
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-surface-500">
                 <Wallet className="h-4 w-4" />
               </div>
               <input
@@ -194,7 +194,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
                 placeholder="TRON Address (starts with T...) or Tx Hash"
                 value={suspectWallet}
                 onChange={(e) => setSuspectWallet(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-lg bg-police-900 border border-police-700 text-emerald-300 font-mono text-xs focus:outline-none focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-2 rounded-lg bg-police-900 border border-police-700 text-emerald-300 font-mono text-base focus:outline-none focus:border-brand-blue"
               />
             </div>
           </div>
@@ -202,14 +202,14 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
           {/* Chain & Asset Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <label className="block text-base font-semibold text-surface-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
                 <span>Target Blockchain</span>
-                <span className="text-[10px] text-amber-400 font-normal">SIH P0: TRON</span>
+                <span className="text-sm text-amber-400 font-normal">SIH P0: TRON</span>
               </label>
               <select
                 value={chain}
                 onChange={(e) => setChain(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white text-xs focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white text-base focus:outline-none focus:border-brand-blue"
               >
                 <option value="TRON">TRON (Mainnet) - Active</option>
                 <option value="ETHEREUM" disabled>Ethereum (EVM) - Phase 12 Roadmap</option>
@@ -217,14 +217,14 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <label className="block text-base font-semibold text-surface-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
                 <span>Asset / Token Standard</span>
-                <span className="text-[10px] text-emerald-400 font-normal">Primary: TRC-20</span>
+                <span className="text-sm text-emerald-400 font-normal">Primary: TRC-20</span>
               </label>
               <select
                 value={asset}
                 onChange={(e) => setAsset(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white text-xs focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white text-base focus:outline-none focus:border-brand-blue"
               >
                 <option value="TRC20:USDT">USDT (TRC-20 Tether USD)</option>
                 <option value="TRX" disabled>TRX (Native TRON - Roadmap)</option>
@@ -234,7 +234,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
 
           {/* Section 4: Investigation Notes */}
           <div className="pt-2 border-t border-police-700/60">
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label className="block text-base font-semibold text-surface-300 uppercase tracking-wider mb-1.5">
               Investigation Notes & Modus Operandi
             </label>
             <textarea
@@ -242,7 +242,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
               placeholder="Record preliminary details, fraudulent Telegram links, phishing domains, or syndicate notes..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-lg bg-police-900 border border-police-700 text-white placeholder-surface-400 text-base focus:outline-none focus:border-brand-blue"
             />
           </div>
         </form>
@@ -252,7 +252,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-police-700 hover:bg-police-600 text-slate-200 transition"
+            className="px-4 py-2 text-base font-semibold rounded-lg bg-police-700 hover:bg-police-600 text-surface-200 transition"
           >
             Cancel
           </button>
@@ -260,7 +260,7 @@ export const NewCaseModal: React.FC<NewCaseModalProps> = ({ isOpen, onClose, onS
             type="button"
             onClick={handleSubmit}
             disabled={loading}
-            className="flex items-center gap-2 px-5 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 transition disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2 text-base font-bold rounded-lg bg-brand-blue hover:bg-brand-hover text-white shadow-lg shadow-blue-500/20 transition disabled:opacity-50"
           >
             {loading ? 'Persisting to PostgreSQL...' : 'Register Investigation Case'}
             <ArrowRight className="h-4 w-4" />
