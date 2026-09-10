@@ -322,12 +322,21 @@ export const CaseListView: React.FC<CaseListViewProps> = ({
             </thead>
             <tbody className="divide-y divide-surface-200 dark:divide-surface-300 text-xs text-surface-800 dark:text-surface-200">
               {loading ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-16 text-center text-surface-500">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-brand-blue mb-2" />
-                    <p>Loading forensic case records from PostgreSQL...</p>
-                  </td>
-                </tr>
+                <>
+                  {[...Array(6)].map((_, i) => (
+                    <tr key={i} className="animate-pulse h-12 border-b border-surface-200 dark:border-surface-300">
+                      <td className="px-4 py-3"><div className="h-3.5 w-6 bg-surface-200 dark:bg-surface-300 rounded" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-36 bg-surface-200 dark:bg-surface-300 rounded" /></td>
+                      <td className="px-4 py-3"><div className="h-3.5 w-24 bg-surface-200 dark:bg-surface-300 rounded" /></td>
+                      <td className="px-4 py-3"><div className="h-3.5 w-28 bg-surface-200 dark:bg-surface-300 rounded" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-16 bg-surface-200 dark:bg-surface-300 rounded" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-20 bg-surface-200 dark:bg-surface-300 rounded" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-12 bg-surface-200 dark:bg-surface-300 rounded" /></td>
+                      <td className="px-4 py-3"><div className="h-3.5 w-20 bg-surface-200 dark:bg-surface-300 rounded" /></td>
+                      <td className="px-4 py-3 text-right"><div className="h-6 w-16 bg-surface-200 dark:bg-surface-300 rounded ml-auto" /></td>
+                    </tr>
+                  ))}
+                </>
               ) : filteredCases.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-16 text-center text-surface-500">
