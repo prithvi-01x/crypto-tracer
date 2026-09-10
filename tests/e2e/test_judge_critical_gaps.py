@@ -120,80 +120,102 @@ async def test_new_case_empty_state_trace_execution(page: Page, base_url: str):
     unique_fir = f"FIR-2026-TEST-{uuid.uuid4().hex[:6].upper()}"
     target_wallet = "TYDZSxdBzWnCuB4jF3K6j5X3qW7b9X1234"
 
-    await page.goto(base_url, wait_until="networkidle")
+    try:
+        await page.goto(base_url, wait_until="networkidle")
 
-    # Click Register Case button on home
-    new_case_btn = page.locator("button:has-text('New Investigation Case')").first
-    await expect(new_case_btn).to_be_visible()
-    await new_case_btn.click()
+        # Click Register Case button on home
+        new_case_btn = page.locator("button:has-text('New Investigation Case')").first
+        await expect(new_case_btn).to_be_visible()
+        await new_case_btn.click()
 
-    # Fill case intake form
-    fir_input = page.locator("input[placeholder*='2026/812']").first
-    await expect(fir_input).to_be_visible()
-    await fir_input.fill(unique_fir)
+        # Fill case intake form
+        fir_input = page.locator("input[placeholder*='2026/812']").first
+        await expect(fir_input).to_be_visible()
+        await fir_input.fill(unique_fir)
 
-    wallet_input = page.locator("input[placeholder*='TRON Address']").first
-    await wallet_input.fill(target_wallet)
+        wallet_input = page.locator("input[placeholder*='TRON Address']").first
+        await wallet_input.fill(target_wallet)
 
-    loss_input = page.locator("input[placeholder='500000.00']").first
-    await loss_input.fill("500000")
+        loss_input = page.locator("input[placeholder='500000.00']").first
+        await loss_input.fill("500000")
 
-    victim_input = page.locator("input[placeholder*='Ramesh Kumar']").first
-    await victim_input.fill("Deepak Verma")
+        victim_input = page.locator("input[placeholder*='Ramesh Kumar']").first
+        await victim_input.fill("Deepak Verma")
 
-    # Submit new case
-    submit_btn = page.locator("button:has-text('Register Investigation Case')").first
-    await submit_btn.click()
+        # Submit new case
+        submit_btn = page.locator("button:has-text('Register Investigation Case')").first
+        await submit_btn.click()
 
-    # Wait for navigation into Case Workspace
-    await page.wait_for_timeout(1000)
-    await expect(page.locator(f"span:has-text('{unique_fir}')")).to_be_visible()
+        # Wait for navigation into Case Workspace
+        await page.wait_for_timeout(1000)
+        await expect(page.locator(f"span:has-text('{unique_fir}')")).to_be_visible()
 
-    # Verify Empty State Trace Launcher Card is displayed
-    launcher_heading = page.locator("text='Trace Suspect Wallet'")
-    await expect(launcher_heading).to_be_visible()
+        # Verify Empty State Trace Launcher Card is displayed
+        launcher_heading = page.locator("text='Trace Suspect Wallet'")
+        await expect(launcher_heading).to_be_visible()
 
-    # Verify target wallet is prefilled in launcher
-    wallet_field = page.locator(f"input[value='{target_wallet}']").first
-    await expect(wallet_field).to_be_visible()
+        # Verify target wallet is prefilled in launcher
+        wallet_field = page.locator(f"input[value='{target_wallet}']").first
+        await expect(wallet_field).to_be_visible()
 
-    # Verify DEMO and LIVE options are present
-    assert await page.locator("button:has-text('DEMO REPLAY')").count() > 0
-    assert await page.locator("button:has-text('LIVE TRON RPC')").count() > 0
+        # Verify DEMO and LIVE options are present
+        assert await page.locator("button:has-text('DEMO REPLAY')").count() > 0
+        assert await page.locator("button:has-text('LIVE TRON RPC')").count() > 0
 
-    # Click "Execute Multi-Hop Trace"
-    execute_btn = page.locator("button:has-text('Execute Multi-Hop Trace')")
-    await expect(execute_btn).to_be_visible()
-    await execute_btn.click()
+        # Click "Execute Multi-Hop Trace"
+        execute_btn = page.locator("button:has-text('Execute Multi-Hop Trace')")
+        await expect(execute_btn).to_be_visible()
+        await execute_btn.click()
 
-    # Wait for trace completion and graph rendering
-    traversal_depth = page.locator("text='Traversal Depth'")
-    await expect(traversal_depth).to_be_visible(timeout=15000)
+        # Wait for trace completion and graph rendering
+        traversal_depth = page.locator("text='Traversal Depth'")
+        await expect(traversal_depth).to_be_visible(timeout=15000)
 
-    # Verify Active Topology is rendered
-    active_topology = page.locator("text='Active Topology'")
-    await expect(active_topology).to_be_visible()
+        # Verify Active Topology is rendered
+        active_topology = page.locator("text='Active Topology'")
+        await expect(active_topology).to_be_visible()
 
-    # Verify Re-Trace button is available in toolbar
-    retrace_btn = page.locator("button:has-text('Re-Trace')")
-    await expect(retrace_btn).to_be_visible()
+        # Verify Re-Trace button is available in toolbar
+        retrace_btn = page.locator("button:has-text('Re-Trace')")
+        await expect(retrace_btn).to_be_visible()
 
-    # 1. Verify VASP Attribution tab works
-    await select_tab(page, "VASP Attribution")
-    vasp_heading = page.locator("text=Attribution Finding:")
-    await expect(vasp_heading).to_be_visible(timeout=8000)
+        # 1. Verify VASP Attribution tab works
+        await select_tab(page, "VASP Attribution")
+        vasp_heading = page.locator("text=Attribution Finding:")
+        await expect(vasp_heading).to_be_visible(timeout=8000)
 
-    # 2. Verify Forensic Findings tab works
-    await select_tab(page, "Forensic Findings")
-    findings_panel = page.locator("h2:has-text('Forensic Findings & Alerts')")
-    await expect(findings_panel).to_be_visible(timeout=8000)
+        # 2. Verify Forensic Findings tab works
+        await select_tab(page, "Forensic Findings")
+        findings_panel = page.locator("h2:has-text('Forensic Findings & Alerts')")
+        await expect(findings_panel).to_be_visible(timeout=8000)
 
-    # 3. Verify Evidence Vault tab works
-    await select_tab(page, "Evidence Vault")
-    evidence_vault = page.locator("text=Cryptographic SHA-256 Hash")
-    await expect(evidence_vault).to_be_visible(timeout=8000)
+        # 3. Verify Evidence Vault tab works
+        await select_tab(page, "Evidence Vault")
+        evidence_vault = page.locator("text=Cryptographic SHA-256 Hash")
+        await expect(evidence_vault).to_be_visible(timeout=8000)
 
-    # 4. Verify Reports tab works
-    await select_tab(page, "Reports & Legal Draft")
-    reports_view = page.locator("text=Complete Evidence Dossier")
-    await expect(reports_view).to_be_visible(timeout=8000)
+        # 4. Verify Reports tab works
+        await select_tab(page, "Reports & Legal Draft")
+        reports_view = page.locator("text=Complete Evidence Dossier")
+        await expect(reports_view).to_be_visible(timeout=8000)
+    finally:
+        # Clean up test case via API so demo register remains clean (10 curated cases)
+        try:
+            import json
+            import urllib.request
+            cases_url = f"{base_url.rstrip('/')}/api/v1/cases?limit=50"
+            with urllib.request.urlopen(cases_url, timeout=3.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                for c in data.get("cases", []):
+                    if c.get("fir_number") == unique_fir:
+                        case_id = c.get("id")
+                        del_req = urllib.request.Request(
+                            f"{base_url.rstrip('/')}/api/v1/cases/{case_id}",
+                            method="DELETE",
+                        )
+                        urllib.request.urlopen(del_req, timeout=3.0)
+                        break
+        except Exception:
+            pass
+
+
