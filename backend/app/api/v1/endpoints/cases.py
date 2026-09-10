@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.persistence.db import get_db
 from backend.app.persistence.case_repository import CaseRepository
 from backend.app.persistence.trace_repository import TraceRepository
-from backend.app.api.v1.schemas.cases import CaseCreate, CaseResponse, CaseListResponse
+from backend.app.api.v1.schemas.cases import CaseCreate, CaseUpdate, CaseNoteCreate, CaseResponse, CaseListResponse
 from backend.app.api.v1.schemas.traces import TraceStatusResponse
 
 from backend.app.adapters.tron_provider import validate_tron_address
@@ -117,6 +117,70 @@ async def get_case(
     Retrieve full details of a specific investigation case by ID.
     """
     case = await CaseRepository.get_by_id(db, case_id)
+    if not case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Investigation case '{case_id}' not found."
+        )
+    return CaseResponse(
+        id=case.id,
+        fir_number=case.fir_number,
+        victim_reference=case.victim_reference,
+        loss_amount_inr=case.loss_amount_inr,
+        ack_number=case.ack_number,
+        suspect_wallet=case.suspect_wallet,
+        chain=case.chain,
+        asset=case.asset,
+        notes=case.notes,
+        status=case.status,
+        created_at=case.created_at,
+        updated_at=case.updated_at,
+        trace_count=len(case.traces) if hasattr(case, "traces") and case.traces else 0,
+    )
+
+
+@router.patch("/{case_id}", response_model=CaseResponse)
+async def update_case(
+    case_id: str,
+    case_update: CaseUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update investigation case details (e.g. status or notes).
+    """
+    case = await CaseRepository.update(db, case_id, case_update)
+    if not case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Investigation case '{case_id}' not found."
+        )
+    return CaseResponse(
+        id=case.id,
+        fir_number=case.fir_number,
+        victim_reference=case.victim_reference,
+        loss_amount_inr=case.loss_amount_inr,
+        ack_number=case.ack_number,
+        suspect_wallet=case.suspect_wallet,
+        chain=case.chain,
+        asset=case.asset,
+        notes=case.notes,
+        status=case.status,
+        created_at=case.created_at,
+        updated_at=case.updated_at,
+        trace_count=len(case.traces) if hasattr(case, "traces") and case.traces else 0,
+    )
+
+
+@router.post("/{case_id}/notes", response_model=CaseResponse)
+async def add_case_note(
+    case_id: str,
+    note_in: CaseNoteCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Append an investigator note with timestamp to the case record.
+    """
+    case = await CaseRepository.add_note(db, case_id, note_in.note, note_in.author)
     if not case:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

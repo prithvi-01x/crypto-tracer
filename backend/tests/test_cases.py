@@ -110,3 +110,67 @@ async def test_list_traces_for_case(async_client: AsyncClient):
     traces_res = await async_client.get(f"/api/v1/cases/{case_id}/traces")
     assert traces_res.status_code == 200
     assert traces_res.json() == []
+
+
+@pytest.mark.asyncio
+async def test_update_case_notes_and_status(async_client: AsyncClient):
+    create_payload = {
+        "fir_number": "2026/UPDATE_NOTES_01",
+        "victim_reference": "UPDATE-TEST-USER",
+        "loss_amount_inr": 200000.00,
+        "notes": "Initial FIR notes",
+    }
+    case_res = await async_client.post("/api/v1/cases", json=create_payload)
+    assert case_res.status_code == 201
+    case_id = case_res.json()["id"]
+
+    # Update notes via PATCH
+    patch_res = await async_client.patch(
+        f"/api/v1/cases/{case_id}",
+        json={"notes": "Updated comprehensive investigation notes.", "status": "IN_PROGRESS"}
+    )
+    assert patch_res.status_code == 200
+    updated = patch_res.json()
+    assert updated["notes"] == "Updated comprehensive investigation notes."
+    assert updated["status"] == "IN_PROGRESS"
+
+    # Verify persistence with GET
+    get_res = await async_client.get(f"/api/v1/cases/{case_id}")
+    assert get_res.status_code == 200
+    assert get_res.json()["notes"] == "Updated comprehensive investigation notes."
+    assert get_res.json()["status"] == "IN_PROGRESS"
+
+
+@pytest.mark.asyncio
+async def test_add_case_note_appends_timestamped_entry(async_client: AsyncClient):
+    create_payload = {
+        "fir_number": "2026/ADD_NOTE_02",
+        "victim_reference": "NOTE-TEST-USER",
+        "notes": "Existing observation 1",
+    }
+    case_res = await async_client.post("/api/v1/cases", json=create_payload)
+    assert case_res.status_code == 201
+    case_id = case_res.json()["id"]
+
+    # Append note
+    note_payload = {
+        "note": "Section 91 CrPC notice dispatched to Binance Compliance.",
+        "author": "Insp. Vikramaditya",
+    }
+    note_res = await async_client.post(f"/api/v1/cases/{case_id}/notes", json=note_payload)
+    assert note_res.status_code == 200
+    data = note_res.json()
+    assert "Existing observation 1" in data["notes"]
+    assert "Section 91 CrPC notice dispatched to Binance Compliance." in data["notes"]
+    assert "Insp. Vikramaditya" in data["notes"]
+    assert "UTC" in data["notes"]
+
+
+@pytest.mark.asyncio
+async def test_update_case_not_found(async_client: AsyncClient):
+    res = await async_client.patch(
+        "/api/v1/cases/00000000-0000-0000-0000-000000000000",
+        json={"notes": "Should fail"}
+    )
+    assert res.status_code == 404
+

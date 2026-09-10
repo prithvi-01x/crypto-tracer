@@ -24,6 +24,12 @@ class CaseUpdate(BaseModel):
     notes: Optional[str] = Field(None, description="Additional investigation notes")
 
 
+class CaseNoteCreate(BaseModel):
+    note: str = Field(..., min_length=1, max_length=4096, description="Investigator note content", json_schema_extra={"example": "Section 91 CrPC notice served on exchange compliance team."})
+    author: Optional[str] = Field("Investigating Officer", max_length=128, description="Author or officer designation", json_schema_extra={"example": "Insp. Sharma"})
+
+
+
 class CaseResponse(CaseBase):
     id: str
     status: str

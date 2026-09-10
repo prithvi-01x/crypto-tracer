@@ -1,8 +1,9 @@
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 from backend.app.persistence.models import Case
-from backend.app.api.v1.schemas.cases import CaseCreate
+from backend.app.api.v1.schemas.cases import CaseCreate, CaseUpdate
 
 
 class CaseRepository:
@@ -44,3 +45,39 @@ class CaseRepository:
         result = await session.execute(query)
         cases = list(result.scalars().all())
         return cases, total
+
+    @staticmethod
+    async def update(session: AsyncSession, case_id: str, case_update: CaseUpdate) -> Optional[Case]:
+        case = await CaseRepository.get_by_id(session, case_id)
+        if not case:
+            return None
+        if case_update.notes is not None:
+            case.notes = case_update.notes.strip() if case_update.notes else None
+        if case_update.status is not None:
+            case.status = case_update.status.strip()
+        case.updated_at = datetime.now(timezone.utc)
+        await session.commit()
+        await session.refresh(case)
+        return case
+
+    @staticmethod
+    async def add_note(
+        session: AsyncSession,
+        case_id: str,
+        note_text: str,
+        author: Optional[str] = "Investigating Officer"
+    ) -> Optional[Case]:
+        case = await CaseRepository.get_by_id(session, case_id)
+        if not case:
+            return None
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        formatted_entry = f"[{now_str} | {author or 'Investigating Officer'}]\n{note_text.strip()}"
+        if case.notes and case.notes.strip():
+            case.notes = f"{case.notes.strip()}\n\n{formatted_entry}"
+        else:
+            case.notes = formatted_entry
+        case.updated_at = datetime.now(timezone.utc)
+        await session.commit()
+        await session.refresh(case)
+        return case
+
