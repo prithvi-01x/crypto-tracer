@@ -34,6 +34,7 @@ from backend.app.domain.demo.canonical_data import (
     ADDR_HOP4_BINANCE_HOT,
     DemoFixtureProvider,
 )
+from backend.app.domain.demo.seed_demo_cases import CURATED_DEMO_CASES
 
 router = APIRouter(prefix="/demo", tags=["Demo Replay"])
 
@@ -134,15 +135,22 @@ async def seed_canonical_demo(
     Idempotently purges previous demo runs and initializes the canonical SIH case,
     executing the 4-hop trace, attribution analysis, and evidence generation in sub-second time.
     """
-    # 1. Clean up existing canonical case if present
+    # 1. Clean up existing canonical case if present and purge leftover test cases
     existing_cases = await db.execute(
         select(Case).where((Case.id == CANONICAL_CASE_ID) | (Case.fir_number == CANONICAL_FIR))
     )
     for c in existing_cases.scalars().all():
         await db.delete(c)
+
+    # Purge any test artifacts (FIR-2026-TEST-*, FIR-2026-AUDIT-*, etc.)
+    all_cases_res = await db.execute(select(Case))
+    for c in all_cases_res.scalars().all():
+        if c.fir_number.startswith(("FIR-2026-TEST-", "FIR-2026-AUDIT-", "FIR-2026-EMPTY-", "FIR-2026-VIEWPORT-", "FIR-2026-DARK-", "FIR-2026-PREVIEW-")):
+            await db.delete(c)
     await db.commit()
 
     # 2. Create the clean canonical Case record
+    now_utc_ts = datetime.now(timezone.utc)
     canonical_case = Case(
         id=CANONICAL_CASE_ID,
         fir_number=CANONICAL_FIR,
@@ -154,11 +162,38 @@ async def seed_canonical_demo(
         asset=CANONICAL_ASSET,
         notes=CANONICAL_NOTES,
         status="OPEN",
-        created_at=datetime.now(timezone.utc),
+        created_at=now_utc_ts,
     )
     db.add(canonical_case)
+
+    # Ensure remaining 9 curated demo cases are present
+    from datetime import timedelta
+    for c_data in CURATED_DEMO_CASES:
+        if c_data["id"] == CANONICAL_CASE_ID:
+            continue
+        c_time = now_utc_ts - timedelta(days=c_data["days_ago"], hours=c_data["days_ago"] * 2)
+        ex_res = await db.execute(select(Case).where((Case.id == c_data["id"]) | (Case.fir_number == c_data["fir_number"])))
+        ex_case = ex_res.scalars().first()
+        if not ex_case:
+            new_c = Case(
+                id=c_data["id"],
+                fir_number=c_data["fir_number"],
+                victim_reference=c_data["victim_reference"],
+                loss_amount_inr=c_data["loss_amount_inr"],
+                ack_number=c_data["ack_number"],
+                suspect_wallet=c_data["suspect_wallet"],
+                chain=c_data["chain"],
+                asset=c_data["asset"],
+                notes=c_data["notes"],
+                status=c_data["status"],
+                created_at=c_time,
+                updated_at=c_time,
+            )
+            db.add(new_c)
+
     await db.commit()
     await db.refresh(canonical_case)
+
 
     # 3. Create the canonical Trace record
     trace_record = await TraceRepository.create(
