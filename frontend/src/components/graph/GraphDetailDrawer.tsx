@@ -5,16 +5,19 @@ import {
   ArrowRight, 
   Copy, 
   Check, 
-  ExternalLink,
-  GitCommit,
-  ShieldCheck,
-  Target,
-  FileText,
-  Building2,
-  TrendingDown,
-  Info
+  ExternalLink, 
+  GitCommit, 
+  ShieldCheck, 
+  Target, 
+  FileText, 
+  Building2, 
+  TrendingDown, 
+  Info,
+  AlertTriangle
 } from 'lucide-react';
 import type { GraphNode, GraphEdge } from '../../types/graph';
+import type { AttributionResponse } from '../../types/attribution';
+import type { ForensicFindingItem } from '../../types/findings';
 
 interface GraphDetailDrawerProps {
   selectedNode: GraphNode | null;
@@ -23,6 +26,8 @@ interface GraphDetailDrawerProps {
   onHighlightPathToRoot?: (address: string) => void;
   onNavigateToReports?: () => void;
   onNavigateToEvidence?: () => void;
+  attribution?: AttributionResponse | null;
+  findings?: ForensicFindingItem[];
 }
 
 export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
@@ -32,6 +37,8 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
   onHighlightPathToRoot,
   onNavigateToReports,
   onNavigateToEvidence,
+  attribution,
+  findings = [],
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -47,7 +54,7 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(num).replace('$', '') + ' USDT';
   };
 
-  // If nothing is selected, render the Reactor Entity Profiler idle/standby view
+  // If nothing is selected, render the Reactor Entity Profiler standby view
   if (!selectedNode && !selectedEdge) {
     return (
       <div className="flex flex-col h-full bg-surface-default dark:bg-surface-100 text-surface-800 dark:text-surface-100 transition-colors">
@@ -78,12 +85,13 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
           <div className="p-3 rounded-lg bg-surface-50 dark:bg-surface-200/40 border border-surface-200 dark:border-surface-300 text-left w-full text-xs space-y-2">
             <div className="flex items-center gap-2 text-surface-700 dark:text-surface-300 font-semibold">
               <Info className="h-4 w-4 text-reactor-orange shrink-0" />
-              <span>Investigation Tips</span>
+              <span>Investigation Navigation Tips</span>
             </div>
             <ul className="text-surface-500 space-y-1 pl-4 list-disc text-[11px]">
-              <li>Red nodes highlight the illicit source wallet.</li>
-              <li>Green nodes indicate candidate VASP deposit cashouts.</li>
-              <li>Clicking an endpoint automatically computes Dijkstra path to root.</li>
+              <li>Red nodes highlight the root suspect wallet.</li>
+              <li>Purple &amp; green nodes indicate candidate VASP deposit cashouts.</li>
+              <li>Selecting any node traces its Dijkstra path from the root suspect.</li>
+              <li>Use hotkeys: <code className="px-1 py-0.5 bg-surface-200 rounded font-mono">F</code> (Fit), <code className="px-1 py-0.5 bg-surface-200 rounded font-mono">C</code> (Center), <code className="px-1 py-0.5 bg-surface-200 rounded font-mono">L</code> (Labels).</li>
             </ul>
           </div>
         </div>
@@ -91,9 +99,9 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
         <div className="p-3 border-t border-surface-200 dark:border-surface-300 bg-surface-50 dark:bg-surface-200/50 flex items-center justify-between text-xs text-surface-500">
           <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
             <ShieldCheck className="h-3.5 w-3.5" />
-            DAG Sealed
+            Forensic Integrity Sealed
           </span>
-          <span className="font-mono text-[11px]">BSA Sec. 63</span>
+          <span className="font-mono text-[11px]">Section 63 BSA</span>
         </div>
       </div>
     );
@@ -104,6 +112,14 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
   const sentNum = selectedNode ? (typeof selectedNode.total_sent === 'string' ? parseFloat(selectedNode.total_sent) : selectedNode.total_sent) : 0;
   const netRetained = Math.max(0, (receivedNum || 0) - (sentNum || 0));
 
+  // Determine attribution candidate match
+  const isCandidateNode = !!(selectedNode && attribution?.best_candidate?.candidate_address === selectedNode.address);
+  const isEndpointNode = selectedNode?.node_type === 'endpoint';
+  const vaspName = attribution?.best_candidate?.exchange_name || 'VASP Entity';
+
+  // Filter findings matching selected node
+  const nodeFindings = selectedNode ? findings.filter(f => f.related_address === selectedNode.address || f.graph_node_id === selectedNode.address) : [];
+
   return (
     <div className="flex flex-col h-full bg-surface-default dark:bg-surface-100 text-surface-800 dark:text-surface-100 transition-colors">
       {/* Header */}
@@ -113,6 +129,8 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
             <div className={`p-1.5 rounded ${
               selectedNode.node_type === 'suspect'
                 ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                : isCandidateNode
+                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
                 : selectedNode.node_type === 'endpoint'
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                 : 'bg-blue-500/10 text-brand-blue dark:text-blue-400'
@@ -135,7 +153,7 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
         </div>
         <button
           onClick={onClose}
-          className="p-1 rounded text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-200/60 transition"
+          className="p-1 rounded text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-200/60 transition cursor-pointer"
           aria-label="Close Inspector"
         >
           <X className="h-4 w-4" />
@@ -148,25 +166,93 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
         {selectedNode && (
           <div className="space-y-4">
             {/* Risk / Entity Type Badge & Hop */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className={`px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wide border ${
                 selectedNode.node_type === 'suspect'
                   ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+                  : isCandidateNode
+                  ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
                   : selectedNode.node_type === 'endpoint'
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                   : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
               }`}>
                 {selectedNode.node_type === 'suspect' 
                   ? '🚨 Root Suspect' 
+                  : isCandidateNode
+                  ? `🎯 VASP Candidate (${vaspName}) • Endpoint`
                   : selectedNode.node_type === 'endpoint' 
-                  ? '🎯 Endpoint / VASP Candidate' 
+                  ? '🎯 Endpoint / VASP Deposit' 
                   : '🔗 Intermediate Hop'}
               </span>
 
-              <span className="px-2 py-0.5 rounded text-xs font-mono bg-surface-100 dark:bg-surface-200 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-300">
+              <span className="px-2 py-0.5 rounded text-xs font-mono bg-surface-100 dark:bg-surface-200 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-300 font-semibold">
                 Hop Level: {selectedNode.hop}
               </span>
             </div>
+
+            {/* Active Forensic Findings for this Node if any */}
+            {nodeFindings.length > 0 && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-red-700 dark:text-red-300 flex items-center gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                    <span>Flagged Forensic Indicators ({nodeFindings.length})</span>
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {nodeFindings.slice(0, 2).map((f) => (
+                    <div key={f.finding_id} className="p-2 rounded bg-surface-default dark:bg-surface-100 border border-red-200 dark:border-red-900/40 text-[11px]">
+                      <div className="flex items-center justify-between font-semibold text-red-700 dark:text-red-300">
+                        <span>{f.title}</span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-red-500/20 text-red-800 dark:text-red-200 font-bold">
+                          {f.severity}
+                        </span>
+                      </div>
+                      <p className="text-surface-600 dark:text-surface-400 text-[10px] mt-0.5 line-clamp-2">
+                        {f.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* VASP Attribution Card (for Candidate or Endpoint) */}
+            {(isCandidateNode || (isEndpointNode && attribution?.best_candidate)) && attribution?.best_candidate && (
+              <div className="p-3.5 rounded-lg bg-purple-500/10 border border-purple-500/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-purple-700 dark:text-purple-300 font-bold uppercase text-[11px] tracking-wider">
+                    <Building2 className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                    <span>VASP Attribution Intelligence</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/20 text-purple-800 dark:text-purple-300">
+                    {Math.round((attribution.best_candidate.confidence_score || 0) * 100)}% Match
+                  </span>
+                </div>
+                <div className="p-2.5 rounded bg-surface-default dark:bg-surface-100 border border-purple-200 dark:border-purple-900/40 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-surface-500 uppercase font-bold">Identified Entity</span>
+                    <span className="font-bold text-xs text-purple-700 dark:text-purple-300 font-mono">
+                      {attribution.best_candidate.exchange_name || 'VASP Entity'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-surface-500 uppercase font-bold">Clustering Strategy</span>
+                    <span className="font-mono text-[11px] text-surface-700 dark:text-surface-300">
+                      {attribution.best_candidate.clustering_rule || 'Deposit Sweep & Forwarding'}
+                    </span>
+                  </div>
+                  {attribution.best_candidate.attribution_type && (
+                    <div className="flex items-center justify-between pt-1 border-t border-surface-200 dark:border-surface-300/50">
+                      <span className="text-[10px] text-surface-500 uppercase font-bold">Evidence Rule</span>
+                      <span className="font-mono text-[10px] text-surface-600 dark:text-surface-400">
+                        {attribution.best_candidate.attribution_type}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Address Box */}
             <div className="p-3.5 rounded-lg bg-surface-50 dark:bg-surface-200/50 border border-surface-200 dark:border-surface-300 space-y-2.5">
@@ -246,8 +332,8 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
               <p className="text-xs sm:text-[13px] text-surface-700 dark:text-surface-200 leading-relaxed font-normal">
                 {selectedNode.node_type === 'suspect' ? (
                   'Designated primary victim loss exit / suspect source wallet. All downstream funds cascade from this root address across multi-hop layering.'
-                ) : selectedNode.node_type === 'endpoint' ? (
-                  'Designated terminal cashout destination cluster. Associated with recognized VASP deposit patterns for crypto-to-fiat off-ramping.'
+                ) : isCandidateNode || selectedNode.node_type === 'endpoint' ? (
+                  `Designated terminal cashout destination cluster. Correlated with recognized ${vaspName} deposit sweeps for crypto-to-fiat off-ramping.`
                 ) : (
                   `Intermediate pass-through hop ${selectedNode.hop}. Used to rapidly split or consolidate stolen liquidity before depositing to centralized exchanges.`
                 )}
@@ -262,17 +348,17 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
                   className="w-full py-2.5 px-3 rounded-lg bg-surface-100 hover:bg-surface-200 dark:bg-surface-200 dark:hover:bg-surface-300 text-surface-800 dark:text-surface-100 font-bold text-xs transition flex items-center justify-center gap-2 border border-surface-200 dark:border-surface-300 cursor-pointer shadow-xs"
                 >
                   <Target className="h-4 w-4 text-reactor-orange" />
-                  Highlight Dijkstra Path to Root
+                  <span>Highlight Trail from Suspect</span>
                 </button>
               )}
 
-              {selectedNode.node_type === 'endpoint' && onNavigateToReports && (
+              {(selectedNode.node_type === 'endpoint' || isCandidateNode) && onNavigateToReports && (
                 <button
                   onClick={onNavigateToReports}
                   className="w-full py-2.5 px-3 rounded-lg bg-brand-blue hover:bg-brand-hover text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
                   <FileText className="h-4 w-4" />
-                  Draft Section 94 Notice for VASP
+                  <span>Draft Section 94 Notice for VASP</span>
                 </button>
               )}
 
@@ -282,7 +368,7 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
                   className="w-full py-2.5 px-3 rounded-lg bg-surface-50 hover:bg-surface-100 dark:bg-surface-200/40 dark:hover:bg-surface-200 text-surface-700 dark:text-surface-200 font-semibold text-xs transition flex items-center justify-center gap-2 border border-surface-200 dark:border-surface-300 cursor-pointer shadow-xs"
                 >
                   <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                  Verify in Cryptographic Evidence Vault
+                  <span>Verify in Cryptographic Evidence Vault</span>
                 </button>
               )}
             </div>
@@ -294,10 +380,10 @@ export const GraphDetailDrawer: React.FC<GraphDetailDrawerProps> = ({
           <div className="space-y-4">
             {/* Edge Badges */}
             <div className="flex items-center justify-between">
-              <span className="px-2.5 py-1 rounded text-xs font-bold uppercase bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              <span className="px-2.5 py-1 rounded text-xs font-bold uppercase bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold">
                 Hop {selectedEdge.hop} Transfer
               </span>
-              <span className="px-2 py-0.5 rounded text-xs font-mono bg-surface-100 dark:bg-surface-200 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-300">
+              <span className="px-2 py-0.5 rounded text-xs font-mono bg-surface-100 dark:bg-surface-200 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-300 font-bold">
                 {selectedEdge.asset}
               </span>
             </div>
