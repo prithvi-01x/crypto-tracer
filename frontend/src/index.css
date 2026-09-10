@@ -5,41 +5,61 @@
 :root {
   color-scheme: light;
   
-  --brand-blue: #1a4480;
-  --brand-hover: #133463;
-  --brand-light: #ebf2fb;
+  --brand-blue: #122149;
+  --brand-hover: #293972;
+  --brand-light: #e8edff;
   
+  --reactor-orange: #ff5300;
+  --reactor-orange-tint: #ffa352;
+  --reactor-navy: #122149;
+  --reactor-deep-blue: #293972;
+  --reactor-teal: #27ffbe;
+  --reactor-slate: #f4f6fa;
+  --reactor-stroke: #d1d3e0;
+  --reactor-illicit-red: #b50004;
+  --reactor-illicit-bg: #ffe4df;
+
   --surface-default: #ffffff;
-  --surface-50: #f8f9fb;
-  --surface-100: #f1f4f7;
-  --surface-200: #e2e8f0;
-  --surface-300: #d5dbdf;
-  --surface-400: #adb3b7;
-  --surface-500: #767b7f;
-  --surface-600: #5a6064;
-  --surface-700: #485260;
-  --surface-800: #2d3337;
-  --surface-900: #0c0f10;
+  --surface-50: #f4f6fa;
+  --surface-100: #edf1f7;
+  --surface-200: #d1d3e0;
+  --surface-300: #bcc2cf;
+  --surface-400: #8c96a8;
+  --surface-500: #626e82;
+  --surface-600: #445166;
+  --surface-700: #293972;
+  --surface-800: #122149;
+  --surface-900: #080f24;
 }
 
 .dark {
   color-scheme: dark;
   
-  --brand-blue: #60a5fa;
-  --brand-hover: #93c5fd;
-  --brand-light: #1e3a5f;
+  --brand-blue: #3b82f6;
+  --brand-hover: #60a5fa;
+  --brand-light: #122149;
   
-  --surface-default: #0f172a;
-  --surface-50: #0b1120;
-  --surface-100: #131c32;
+  --reactor-orange: #ff5300;
+  --reactor-orange-tint: #ffa352;
+  --reactor-navy: #122149;
+  --reactor-deep-blue: #293972;
+  --reactor-teal: #27ffbe;
+  --reactor-slate: #0b1120;
+  --reactor-stroke: #293972;
+  --reactor-illicit-red: #ef4444;
+  --reactor-illicit-bg: #450a0a;
+
+  --surface-default: #0b1120;
+  --surface-50: #040507;
+  --surface-100: #122149;
   --surface-200: #1e293b;
-  --surface-300: #334155;
+  --surface-300: #293972;
   --surface-400: #475569;
   --surface-500: #64748b;
   --surface-600: #94a3b8;
   --surface-700: #cbd5e1;
   --surface-800: #e2e8f0;
-  --surface-900: #f1f5f9;
+  --surface-900: #f8fafc;
 }
 
 body {

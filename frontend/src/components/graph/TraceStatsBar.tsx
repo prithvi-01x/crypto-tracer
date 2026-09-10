@@ -21,45 +21,45 @@ export const TraceStatsBar: React.FC<TraceStatsBarProps> = ({ meta, onOpenPrunin
   if (!meta) return null;
 
   return (
-    <div className="bg-police-800/90 border border-police-700/80 rounded-xl p-3.5 shadow-md">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="bg-surface-default dark:bg-surface-100 border border-surface-200 dark:border-surface-300 rounded-lg p-2.5 shadow-sm transition-colors">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Metric Cards Group */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-base">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
           {/* Hops */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-police-900/80 border border-police-700/60">
-            <Layers className="h-4 w-4 text-brand-blue shrink-0" />
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-surface-50 dark:bg-surface-200/60 border border-surface-200 dark:border-surface-300">
+            <Layers className="h-3.5 w-3.5 text-brand-blue dark:text-blue-400 shrink-0" />
             <div>
-              <span className="text-sm uppercase font-medium text-surface-400 block leading-tight">Traversal Depth</span>
-              <span className="font-bold font-mono text-surface-200">
+              <span className="text-[10px] uppercase font-semibold text-surface-500 block leading-tight">Traversal Depth</span>
+              <span className="font-bold font-mono text-surface-800 dark:text-surface-100">
                 Hop {meta.hops_reached} / {meta.max_hops_configured}
               </span>
             </div>
           </div>
 
           {/* Raw Transfers */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-police-900/80 border border-police-700/60">
-            <GitFork className="h-4 w-4 text-surface-400 shrink-0" />
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-surface-50 dark:bg-surface-200/60 border border-surface-200 dark:border-surface-300">
+            <GitFork className="h-3.5 w-3.5 text-surface-400 shrink-0" />
             <div>
-              <span className="text-sm uppercase font-medium text-surface-400 block leading-tight">Raw Fetched</span>
-              <span className="font-bold font-mono text-surface-200">{meta.raw_transfers_fetched_count} txs</span>
+              <span className="text-[10px] uppercase font-semibold text-surface-500 block leading-tight">Raw Fetched</span>
+              <span className="font-bold font-mono text-surface-800 dark:text-surface-100">{meta.raw_transfers_fetched_count} txs</span>
             </div>
           </div>
 
           {/* Traversal Relevant */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-police-900/80 border border-police-700/60">
-            <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-surface-50 dark:bg-surface-200/60 border border-surface-200 dark:border-surface-300">
+            <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
             <div>
-              <span className="text-sm uppercase font-medium text-surface-400 block leading-tight">Relevant Txs</span>
-              <span className="font-bold font-mono text-amber-300">{meta.traversal_relevant_transfers_count}</span>
+              <span className="text-[10px] uppercase font-semibold text-surface-500 block leading-tight">Relevant Txs</span>
+              <span className="font-bold font-mono text-amber-600 dark:text-amber-400">{meta.traversal_relevant_transfers_count}</span>
             </div>
           </div>
 
           {/* Graph Edges & Nodes */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-police-900/80 border border-police-700/60">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-surface-50 dark:bg-surface-200/60 border border-surface-200 dark:border-surface-300">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
             <div>
-              <span className="text-sm uppercase font-medium text-surface-400 block leading-tight">Active Graph</span>
-              <span className="font-bold font-mono text-emerald-300">
+              <span className="text-[10px] uppercase font-semibold text-surface-500 block leading-tight">Active Topology</span>
+              <span className="font-bold font-mono text-emerald-600 dark:text-emerald-400">
                 {meta.total_nodes} nodes • {meta.total_edges} edges
               </span>
             </div>
@@ -68,16 +68,16 @@ export const TraceStatsBar: React.FC<TraceStatsBarProps> = ({ meta, onOpenPrunin
           {/* Noise Pruned Count (Clickable) */}
           <button
             onClick={onOpenPruning}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-950/40 border border-purple-800/60 hover:bg-purple-900/40 text-left transition group cursor-pointer"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 text-left transition group cursor-pointer"
             title="Click to view forensic pruning audit"
           >
-            <FilterX className="h-4 w-4 text-purple-400 shrink-0 group-hover:scale-110 transition" />
+            <FilterX className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 shrink-0 group-hover:scale-110 transition" />
             <div>
-              <span className="text-sm uppercase font-medium text-purple-300 flex items-center gap-1 leading-tight">
+              <span className="text-[10px] uppercase font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1 leading-tight">
                 Noise Pruned
                 <ExternalLink className="h-2.5 w-2.5 opacity-70" />
               </span>
-              <span className="font-bold font-mono text-purple-200">
+              <span className="font-bold font-mono text-purple-800 dark:text-purple-200">
                 {prunedCount} transfers (&lt; ${meta.min_relevant_usd.toFixed(2)})
               </span>
             </div>
@@ -85,15 +85,15 @@ export const TraceStatsBar: React.FC<TraceStatsBarProps> = ({ meta, onOpenPrunin
         </div>
 
         {/* Execution Duration & Bounds Notice */}
-        <div className="flex items-center gap-3 text-base text-surface-400">
+        <div className="flex items-center gap-3 text-xs text-surface-500">
           {meta.bounds_hit && (
-            <span className="flex items-center gap-1 text-base px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              <ShieldAlert className="h-4 w-4" />
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-medium">
+              <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
               Safety Bounds Enforced
             </span>
           )}
-          <div className="flex items-center gap-1 font-mono text-base">
-            <Timer className="h-4 w-4 text-surface-500" />
+          <div className="flex items-center gap-1 font-mono">
+            <Timer className="h-3.5 w-3.5 text-surface-400" />
             <span>{meta.duration_ms} ms</span>
           </div>
         </div>

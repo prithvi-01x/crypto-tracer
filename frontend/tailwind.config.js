@@ -12,6 +12,17 @@ export default {
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       colors: {
+        reactor: {
+          orange: '#FF5300',
+          'orange-tint': '#FFA352',
+          navy: '#122149',
+          'deep-blue': '#293972',
+          teal: '#27FFBE',
+          slate: '#F4F6FA',
+          stroke: '#D1D3E0',
+          'illicit-red': '#B50004',
+          'illicit-bg': '#FFE4DF',
+        },
         brand: {
           blue: "var(--brand-blue)",
           hover: "var(--brand-hover)",
