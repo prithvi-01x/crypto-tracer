@@ -14,7 +14,9 @@ import {
   Activity,
   AlertTriangle,
   Sparkles,
-  X
+  X,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import type { CaseItem } from '../../types/case';
 import type { InvestigationGraph, TraceStatus, GraphNode, GraphEdge } from '../../types/graph';
@@ -67,6 +69,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   const [traceMinUsd, setTraceMinUsd] = useState<number>(1.0);
 
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [isGraphMaximized, setIsGraphMaximized] = useState<boolean>(false);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
 
   const [activeTab, setActiveTab] = useState<'graph' | 'attribution' | 'evidence' | 'reports' | 'findings'>('graph');
@@ -205,6 +208,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   const handleViewOnGraph = (addressOrId: string) => {
     setActiveTab('graph');
     setShowFindingsDrawer(false);
+    setIsGraphMaximized(false);
     if (graph && graph.nodes) {
       const node = graph.nodes.find(n => n.address === addressOrId || n.id === addressOrId);
       if (node) {
@@ -405,9 +409,9 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
       </div>
 
       {/* Tab Content Area */}
-      <div className="flex-1 w-full max-w-[96vw] 2xl:max-w-[1920px] mx-auto px-3 sm:px-5 py-2 sm:py-2.5 overflow-hidden flex flex-col">
+      <div className="flex-1 w-full max-w-[98vw] 2xl:max-w-[2100px] mx-auto px-2 sm:px-4 py-1 sm:py-2 overflow-hidden flex flex-col">
         {activeTab === 'graph' && (
-          <div className="flex-1 flex flex-col gap-2.5 h-[calc(100vh-148px)] overflow-hidden">
+          <div className="flex-1 flex flex-col gap-2 h-[calc(100vh-130px)] overflow-hidden">
             {/* Reactor Trace Stats Strip */}
             {graph?.meta && (
               <TraceStatsBar
@@ -418,11 +422,13 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
             )}
 
             {/* Main Graph Split Screen */}
-            <div className="flex-1 flex flex-col lg:flex-row gap-3 min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col lg:flex-row gap-2.5 min-h-0 overflow-hidden">
               {/* Graph Canvas Container */}
-              <div className="w-full lg:w-[67%] xl:w-[68%] h-[55%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col overflow-hidden shadow-xs">
-                <div className="px-3.5 py-2.5 border-b border-surface-200 flex justify-between items-center bg-surface-50">
-                  <div className="flex items-center gap-2.5 flex-wrap">
+              <div className={`h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col overflow-hidden shadow-xs transition-all duration-300 ${
+                isGraphMaximized ? 'w-full' : 'w-full lg:w-[73%] xl:w-[74%] 2xl:w-[75%]'
+              }`}>
+                <div className="px-3 py-2 border-b border-surface-200 flex justify-between items-center bg-surface-50">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-sm text-surface-800 dark:text-surface-100">
                       Forensic Transaction Graph
                     </h3>
@@ -446,11 +452,21 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {graph && (
+                      <button
+                        onClick={() => setIsGraphMaximized(!isGraphMaximized)}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border border-surface-200 bg-surface-default hover:bg-surface-100 text-surface-700 dark:text-surface-200 transition cursor-pointer"
+                        title={isGraphMaximized ? "Restore Split View" : "Maximize Graph"}
+                      >
+                        {isGraphMaximized ? <Minimize2 className="h-3.5 w-3.5 text-reactor-orange" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                        <span className="hidden sm:inline">{isGraphMaximized ? 'Split View' : 'Maximize'}</span>
+                      </button>
+                    )}
                     {graph && (
                       <button
                         onClick={() => setIsRetraceModalOpen(true)}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold border border-surface-200 bg-surface-default hover:bg-surface-100 text-surface-700 dark:text-surface-200 transition cursor-pointer"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-semibold border border-surface-200 bg-surface-default hover:bg-surface-100 text-surface-700 dark:text-surface-200 transition cursor-pointer"
                         title="Re-run trace with different parameters"
                       >
                         <RefreshCw className="h-3.5 w-3.5 text-reactor-orange" />
@@ -459,7 +475,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                     )}
                     <button
                       onClick={() => setShowFindingsDrawer(!showFindingsDrawer)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold border transition cursor-pointer ${
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-semibold border transition cursor-pointer ${
                         showFindingsDrawer
                           ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
                           : 'bg-surface-default border-surface-200 text-surface-600 hover:bg-surface-100'
@@ -484,6 +500,9 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                       selectedEdge={selectedEdge}
                       onSelectNode={setSelectedNode} 
                       onSelectEdge={setSelectedEdge}
+                      attribution={attribution}
+                      isMaximized={isGraphMaximized}
+                      onToggleMaximize={() => setIsGraphMaximized(!isGraphMaximized)}
                     />
                   ) : isTracing ? (
                     /* Active Execution Progress Screen */
@@ -706,7 +725,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
               </div>
 
               {/* Right Panel: Reactor Entity Profiler or Forensic Alerts Drawer */}
-              <div className="w-full lg:w-[33%] xl:w-[32%] h-[45%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col shadow-xs overflow-hidden">
+              <div className={`${isGraphMaximized ? 'hidden' : 'w-full lg:w-[27%] xl:w-[26%] 2xl:w-[25%]'} h-[45%] lg:h-full bg-surface-default border border-surface-200 rounded-lg flex flex-col shadow-xs overflow-hidden transition-all duration-300`}>
                 {showFindingsDrawer ? (
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="p-3 border-b border-surface-200 bg-surface-50 flex items-center justify-between">
@@ -742,6 +761,8 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                     onHighlightPathToRoot={handleViewOnGraph}
                     onNavigateToReports={() => setActiveTab('reports')}
                     onNavigateToEvidence={() => setActiveTab('evidence')}
+                    attribution={attribution}
+                    findings={findings}
                   />
                 )}
               </div>
