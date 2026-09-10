@@ -35,3 +35,5 @@ redis_data/
 data/
 *.pdf
 *.zip
+scratch/
+graphify-out/
