@@ -34,6 +34,7 @@ export interface DemoStatusResponse {
   trace_status?: string | null;
   execution_mode?: string | null;
   message?: string;
+  scenario?: CanonicalScenarioResponse;
 }
 
 export interface CanonicalScenarioResponse {
@@ -74,9 +75,9 @@ export async function getDemoStatus(): Promise<DemoStatusResponse> {
 }
 
 export async function getCanonicalScenario(): Promise<CanonicalScenarioResponse> {
-  const res = await fetch(`${API_BASE}/demo/canonical`);
-  if (!res.ok) {
-    throw new Error('Failed to retrieve canonical scenario details');
+  const status = await getDemoStatus();
+  if (!status.scenario) {
+    throw new Error('Canonical scenario metadata not available');
   }
-  return res.json();
+  return status.scenario;
 }

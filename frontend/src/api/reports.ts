@@ -51,15 +51,6 @@ export async function getCaseReports(
   return response.json();
 }
 
-export async function getReportById(reportId: string): Promise<ReportItem> {
-  const response = await fetch(`${API_BASE}/reports/${reportId}`);
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to fetch report metadata: ${response.statusText}`);
-  }
-  return response.json();
-}
-
 export function getReportDownloadUrl(reportId: string): string {
   return `${API_BASE}/reports/${reportId}/download`;
 }
