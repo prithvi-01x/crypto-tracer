@@ -203,13 +203,8 @@ async def test_fixture_provider():
 
 
 @pytest.mark.asyncio
-async def test_api_endpoint_tron_transfers(async_client):
-    # Test valid mock address format validation
+async def test_api_endpoint_tron_transfers_removed(async_client):
+    """Verify deprecated dev-only blockchain inspection endpoint returns 404."""
     response = await async_client.get(f"/api/v1/blockchain/tron/transfers/{SAMPLE_TRON_ADDRESS}")
-    # In test environment without mocking external TronGrid, either returns 200 or 502/504
-    assert response.status_code in (200, 502, 504)
+    assert response.status_code == 404
 
-    # Test invalid address rejection (400 Bad Request)
-    invalid_res = await async_client.get("/api/v1/blockchain/tron/transfers/invalid_eth_addr")
-    assert invalid_res.status_code == 400
-    assert "Invalid TRON address" in invalid_res.json()["detail"]

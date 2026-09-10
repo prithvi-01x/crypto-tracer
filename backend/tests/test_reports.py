@@ -316,10 +316,13 @@ async def test_reports_api_endpoints(async_client: AsyncClient, test_engine):
     assert "EVIDENCE_DOSSIER" in report_types
     assert "SECTION_94_BNSS" in report_types
 
-    # 5. Call GET /api/v1/reports/{report_id}
+    # 5. Verify report metadata in case reports list and confirm removed single report endpoint returns 404
+    dossier_item = next(r for r in reports_list if r["id"] == dossier_id)
+    assert dossier_item["id"] == dossier_id
+    assert dossier_item["download_url"] == f"/api/v1/reports/{dossier_id}/download"
+
     single_res = await async_client.get(f"/api/v1/reports/{dossier_id}")
-    assert single_res.status_code == 200
-    assert single_res.json()["id"] == dossier_id
+    assert single_res.status_code == 404
 
     # 6. Call GET /api/v1/reports/{report_id}/download
     dl_res = await async_client.get(f"/api/v1/reports/{dossier_id}/download")

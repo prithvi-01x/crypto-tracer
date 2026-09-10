@@ -474,14 +474,17 @@ async def test_evidence_api_endpoints(async_client: AsyncClient, test_engine):
     for item in obs_data["items"]:
         assert item["classification"] == "OBSERVED"
 
-    # 5. Query single evidence item
+    # 5. Verify single evidence item in chain and confirm removed endpoint returns 404
     inferred_items = [i for i in ev_data["items"] if i["classification"] == "INFERRED"]
     assert len(inferred_items) > 0
     inferred_id = inferred_items[0]["id"]
+    assert len(inferred_items[0]["content_hash"]) == 64
 
+    # Removed single-item and case-level evidence routes return 404
     single_ev = await async_client.get(f"/api/v1/evidence/{inferred_id}")
-    assert single_ev.status_code == 200
-    assert single_ev.json()["id"] == inferred_id
+    assert single_ev.status_code == 404
+    case_ev = await async_client.get(f"/api/v1/cases/{case_id}/evidence")
+    assert case_ev.status_code == 404
 
     # 6. Test Human Review Gate: POST /api/v1/cases/{case_id}/attributions/{candidate_address}/review
     review_resp = await async_client.post(
@@ -500,11 +503,16 @@ async def test_evidence_api_endpoints(async_client: AsyncClient, test_engine):
     assert rev_data["evidence_id"] is not None
     assert rev_data["audit_event_id"] is not None
 
-    # Verify the created HUMAN_ACTION evidence item
-    human_ev = await async_client.get(f"/api/v1/evidence/{rev_data['evidence_id']}")
-    assert human_ev.status_code == 200
-    assert human_ev.json()["classification"] == "HUMAN_ACTION"
-    assert human_ev.json()["payload"]["actor_id"] == "IO-Rao-742"
+    # Verify the created HUMAN_ACTION evidence item in the trace evidence chain
+    updated_ev = await async_client.get(f"/api/v1/traces/{trace_id}/evidence")
+    assert updated_ev.status_code == 200
+    human_items = [i for i in updated_ev.json()["items"] if i["id"] == rev_data["evidence_id"]]
+    assert len(human_items) == 1
+    assert human_items[0]["classification"] == "HUMAN_ACTION"
+    assert human_items[0]["payload"]["actor_id"] == "IO-Rao-742"
+
+    # Confirm removed endpoint returns 404
+    assert (await async_client.get(f"/api/v1/evidence/{rev_data['evidence_id']}")).status_code == 404
 
     # 7. Test Audit Trail: GET /api/v1/cases/{case_id}/audit
     audit_resp = await async_client.get(f"/api/v1/cases/{case_id}/audit")

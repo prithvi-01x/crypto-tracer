@@ -17,19 +17,30 @@ from backend.app.domain.attribution.engine import AttributionEngine
 
 @pytest.mark.asyncio
 async def test_canonical_scenario_endpoint(async_client: AsyncClient):
-    """Verify the canonical demo scenario narrative and specification endpoint."""
-    res = await async_client.get("/api/v1/demo/canonical")
+    """Verify canonical scenario narrative and specification are consolidated in /demo/status."""
+    # 1. Consolidated in /demo/status
+    res = await async_client.get("/api/v1/demo/status")
     assert res.status_code == 200
     data = res.json()
-    assert data["fir_number"] == CANONICAL_FIR
-    assert data["victim"].startswith("Ramesh Kumar")
-    assert data["reported_loss_inr"] == 5000000.0
-    assert data["chain"] == "TRON"
-    assert data["asset"] == "TRC20:USDT"
-    assert len(data["hops"]) == 5
-    assert data["hops"][0]["address"] == CANONICAL_SUSPECT_WALLET
-    assert data["hops"][3]["address"] == CANONICAL_DEPOSIT_CANDIDATE
-    assert data["hops"][4]["address"] == BINANCE_HOT_WALLET_4
+    assert "scenario" in data
+    scenario = data["scenario"]
+    assert scenario["fir_number"] == CANONICAL_FIR
+    assert scenario["victim"].startswith("Ramesh Kumar")
+    assert scenario["reported_loss_inr"] == 5000000.0
+    assert scenario["chain"] == "TRON"
+    assert scenario["asset"] == "TRC20:USDT"
+    assert len(scenario["hops"]) == 5
+    assert scenario["hops"][0]["address"] == CANONICAL_SUSPECT_WALLET
+    assert scenario["hops"][3]["address"] == CANONICAL_DEPOSIT_CANDIDATE
+    assert scenario["hops"][4]["address"] == BINANCE_HOT_WALLET_4
+
+    # 2. Confirm removed standalone endpoint returns 404
+    canonical_res = await async_client.get("/api/v1/demo/canonical")
+    assert canonical_res.status_code == 404
+
+    # 3. Confirm removed duplicate alias /demo/reset returns 404
+    reset_res = await async_client.post("/api/v1/demo/reset")
+    assert reset_res.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -151,20 +162,27 @@ async def test_demo_trace_attribution_endpoint(async_client: AsyncClient):
 async def test_demo_evidence_chain_endpoint(async_client: AsyncClient):
     """Verify Section 63 BSA evidence chain integrity for demo case."""
     seed_res = await async_client.post("/api/v1/demo/seed")
-    case_id = seed_res.json()["case_id"]
+    seed_data = seed_res.json()
+    case_id = seed_data["case_id"]
+    trace_id = seed_data["trace_id"]
 
-    res = await async_client.get(f"/api/v1/cases/{case_id}/evidence")
+    res = await async_client.get(f"/api/v1/traces/{trace_id}/evidence")
     assert res.status_code == 200
     data = res.json()
     assert data["case_id"] == case_id
+    assert data["trace_id"] == trace_id
     assert data["total_evidence_count"] >= 10
     assert data["observed_count"] >= 4
     assert data["derived_count"] >= 4
     assert data["inferred_count"] >= 1
 
+    # Verify deprecated case-level evidence endpoint returns 404
+    assert (await async_client.get(f"/api/v1/cases/{case_id}/evidence")).status_code == 404
+
     # Verify hash integrity
     for item in data["items"]:
         assert len(item["content_hash"]) == 64  # SHA-256
+
 
 
 @pytest.mark.asyncio
