@@ -23,7 +23,11 @@ export async function startTrace(input: TraceCreateInput): Promise<TraceStatus> 
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Failed to initiate trace: ${response.statusText}`);
+    const message =
+      (typeof errorData.detail === 'string' ? errorData.detail : errorData.detail?.message) ||
+      errorData.message ||
+      `Failed to initiate trace: ${response.statusText}`;
+    throw new Error(message);
   }
 
   return response.json();
