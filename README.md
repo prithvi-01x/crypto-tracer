@@ -7,7 +7,7 @@
 [![Backend](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Python%203.12-emerald.svg)](https://fastapi.tiangolo.com/)
 [![Frontend](https://img.shields.io/badge/Frontend-React%2019%20%7C%20TypeScript-cyan.svg)](https://react.dev/)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%2016%20%7C%20Redis%207-darkblue.svg)](https://www.postgresql.org/)
-[![Tests](https://img.shields.io/badge/Tests-94%20Passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-100%20Passing-brightgreen.svg)]()
 [![Validation Score](https://img.shields.io/badge/SIH%20Readiness-9.8%20%2F%2010-purple.svg)]()
 
 ---

@@ -37,10 +37,16 @@ Copy the provided template to create your local `.env` configuration:
 cp .env.example .env
 ```
 
-The default values in `.env` are already pre-configured for local execution:
+The default values in `.env` are pre-configured for local execution with live TRON mainnet ingestion:
+* `DEFAULT_EXECUTION_MODE=LIVE`
 * `DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/crypto_tracer`
 * `REDIS_URL=redis://localhost:6379/0`
 * `API_V1_STR=/api/v1`
+* `TRON_API_BASE_URL=https://api.trongrid.io`
+* `TRON_FALLBACK_API_URLS=` (comma-separated secondary RPC endpoints, optional)
+* `TRON_API_KEY=` (optional TronGrid API key for higher rate limits)
+* `TRON_HTTP_TIMEOUT_SECONDS=10.0`
+* `TRON_MAX_RETRIES=3`
 
 ---
 
@@ -169,7 +175,7 @@ This deterministically initializes the official evaluation scenario:
 
 Run the test suites to ensure everything is working correctly:
 
-### Backend Tests (94 Pytest Suites)
+### Backend Tests (100 Pytest Suites)
 ```bash
 source venv/bin/activate
 PYTHONPATH=. pytest backend/tests -v
