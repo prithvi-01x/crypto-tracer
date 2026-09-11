@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import random
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
@@ -39,6 +40,7 @@ class TronProvider(BlockchainProvider):
     def __init__(
         self,
         base_url: Optional[str] = None,
+        fallback_urls: Optional[List[str]] = None,
         api_key: Optional[str] = None,
         redis_client: Optional[aioredis.Redis] = None,
         cache_ttl: Optional[int] = None,
