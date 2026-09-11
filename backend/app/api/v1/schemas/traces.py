@@ -13,7 +13,7 @@ class TraceCreateRequest(BaseModel):
     asset: str = Field("TRC20:USDT", min_length=2, max_length=32, description="Target asset identifier", json_schema_extra={"example": "TRC20:USDT"})
     max_hops: int = Field(4, ge=1, le=6, description="Maximum graph traversal depth (1 to 6)", json_schema_extra={"example": 4})
     min_relevant_usd: Decimal = Field(Decimal("1.00"), ge=0, le=1000000, description="Minimum relevant transfer value", json_schema_extra={"example": 1.00})
-    execution_mode: str = Field("DEMO", pattern="^(DEMO|LIVE)$", description="Execution mode: 'DEMO' or 'LIVE'")
+    execution_mode: str = Field("LIVE", pattern="^(DEMO|LIVE)$", description="Execution mode: 'LIVE' or 'DEMO'")
 
 
 class TraceStatusResponse(BaseModel):
