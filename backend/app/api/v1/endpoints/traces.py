@@ -180,6 +180,7 @@ async def start_trace(
             input_value=updated_trace.input_value,
             asset=updated_trace.asset,
             max_hops=updated_trace.max_hops,
+            execution_mode=updated_trace.execution_mode,
             duration_ms=updated_trace.duration_ms,
             node_count=updated_trace.node_count,
             edge_count=updated_trace.edge_count,
