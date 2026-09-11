@@ -24,7 +24,7 @@ class TraceStatusResponse(BaseModel):
     input_value: str
     asset: str
     max_hops: int
-    execution_mode: str = "DEMO"
+    execution_mode: str = "LIVE"
     duration_ms: Optional[int] = None
     node_count: int = 0
     edge_count: int = 0
