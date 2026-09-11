@@ -75,7 +75,8 @@ async def start_trace(
     clean_input = trace_in.input.strip()
 
     # 3. Determine execution mode & validate address format
-    requested_mode = getattr(trace_in, "execution_mode", "DEMO").upper()
+    raw_mode = getattr(trace_in, "execution_mode", None)
+    requested_mode = (raw_mode or settings.DEFAULT_EXECUTION_MODE).upper()
     is_canonical = is_canonical_demo_address(clean_input)
 
     if is_canonical and requested_mode == "DEMO":
