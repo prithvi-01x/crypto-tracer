@@ -79,7 +79,7 @@ async def start_trace(
     requested_mode = (raw_mode or settings.DEFAULT_EXECUTION_MODE).upper()
     is_canonical = is_canonical_demo_address(clean_input)
 
-    if is_canonical and requested_mode == "DEMO":
+    if requested_mode == "DEMO" and is_canonical:
         resolved_mode = "DEMO"
     else:
         # Standard TRON Base58 validation applies to LIVE/non-demo addresses
