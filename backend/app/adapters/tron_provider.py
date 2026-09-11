@@ -174,19 +174,22 @@ class TronProvider(BlockchainProvider):
         elif direction in ("incoming", "only_to"):
             params["only_to"] = "true"
 
-        url = f"{self.base_url}/v1/accounts/{address}/transactions/trc20"
         headers = self._get_headers()
 
-        # 3. HTTP Request with Bounded Retries & Backoff
-        attempt = 0
-        backoff = 0.5
+        # 3. HTTP Request across configured endpoints with Bounded Retries & Jittered Backoff
         raw_response: Optional[Dict[str, Any]] = None
+        last_exception: Optional[Exception] = None
 
-        async def _do_fetch(client: httpx.AsyncClient):
-            return await client.get(url, params=params, headers=headers, timeout=self.timeout_seconds)
+        for endpoint_idx, endpoint_url in enumerate(self.endpoints):
+            url = f"{endpoint_url}/v1/accounts/{address}/transactions/trc20"
+            attempt = 0
+            backoff = 0.5
 
-        while attempt < self.max_retries:
-            attempt += 1
+            async def _do_fetch(client: httpx.AsyncClient, target_url: str = url):
+                return await client.get(target_url, params=params, headers=headers, timeout=self.timeout_seconds)
+
+            while attempt < self.max_retries:
+                attempt += 1
             try:
                 if self._external_client:
                     response = await _do_fetch(self._external_client)
@@ -228,8 +231,18 @@ class TronProvider(BlockchainProvider):
                 await asyncio.sleep(backoff)
                 backoff *= 2
 
+            if raw_response is not None:
+                break
+            else:
+                if endpoint_idx < len(self.endpoints) - 1:
+                    logger.warning(
+                        f"Endpoint {endpoint_url} exhausted; failing over to {self.endpoints[endpoint_idx + 1]}"
+                    )
+
         if raw_response is None:
-            raise BlockchainProviderError("No response received from TronGrid.")
+            if last_exception:
+                raise last_exception
+            raise BlockchainProviderError("No response received from any configured TRON provider endpoint.")
 
         # 4. Normalize and Deduplicate Transfers
         data_items = raw_response.get("data", [])
