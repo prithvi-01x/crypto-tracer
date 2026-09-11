@@ -200,7 +200,17 @@ class TronProvider(BlockchainProvider):
                 if response.status_code == 200:
                     raw_response = response.json()
                     break
-                elif response.status_code == 429:
+                    elif response.status_code == 400:
+                        # TronGrid rejected address format or account - do NOT failover to next endpoint
+                        err_text = response.text[:250]
+                        try:
+                            err_json = response.json()
+                            if isinstance(err_json, dict) and "error" in err_json:
+                                err_text = str(err_json["error"])
+                        except Exception:
+                            pass
+                        raise InvalidAddressError(f"TronGrid rejected address '{address}': {err_text}")
+                    elif response.status_code == 429:
                     logger.warning(f"TronGrid HTTP 429 Rate Limited (attempt {attempt}/{self.max_retries})")
                     if attempt >= self.max_retries:
                         raise ProviderRateLimitError("TronGrid rate limit reached after retries.")
@@ -218,6 +228,8 @@ class TronProvider(BlockchainProvider):
                     raise BlockchainProviderError(
                         f"TronGrid request failed with HTTP {response.status_code}: {response.text[:200]}"
                     )
+            except InvalidAddressError:
+                    raise
             except httpx.TimeoutException as tex:
                 logger.warning(f"TronGrid timeout on attempt {attempt}/{self.max_retries}: {tex}")
                 if attempt >= self.max_retries:
