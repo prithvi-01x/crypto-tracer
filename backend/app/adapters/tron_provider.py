@@ -48,7 +48,18 @@ class TronProvider(BlockchainProvider):
         max_retries: int = 3,
         http_client: Optional[httpx.AsyncClient] = None,
     ):
-        self.base_url = (base_url or settings.TRON_API_BASE_URL).rstrip("/")
+        primary_url = (base_url or settings.TRON_API_BASE_URL).rstrip("/")
+        configured_fallbacks = fallback_urls if fallback_urls is not None else settings.TRON_FALLBACK_API_URLS
+        all_candidates = [primary_url] + [u.rstrip("/") for u in configured_fallbacks if u and u.strip()]
+
+        seen_endpoints = set()
+        self.endpoints: List[str] = []
+        for u in all_candidates:
+            if u not in seen_endpoints:
+                seen_endpoints.add(u)
+                self.endpoints.append(u)
+
+        self.base_url = self.endpoints[0]
         self.api_key = api_key if api_key is not None else settings.TRON_API_KEY
         self.redis_client = redis_client
         self.cache_ttl = cache_ttl or settings.BLOCKCHAIN_CACHE_TTL_SECONDS
