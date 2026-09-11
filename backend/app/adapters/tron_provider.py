@@ -44,8 +44,8 @@ class TronProvider(BlockchainProvider):
         api_key: Optional[str] = None,
         redis_client: Optional[aioredis.Redis] = None,
         cache_ttl: Optional[int] = None,
-        timeout_seconds: float = 10.0,
-        max_retries: int = 3,
+        timeout_seconds: Optional[float] = None,
+        max_retries: Optional[int] = None,
         http_client: Optional[httpx.AsyncClient] = None,
     ):
         primary_url = (base_url or settings.TRON_API_BASE_URL).rstrip("/")
@@ -63,8 +63,8 @@ class TronProvider(BlockchainProvider):
         self.api_key = api_key if api_key is not None else settings.TRON_API_KEY
         self.redis_client = redis_client
         self.cache_ttl = cache_ttl or settings.BLOCKCHAIN_CACHE_TTL_SECONDS
-        self.timeout_seconds = timeout_seconds
-        self.max_retries = max_retries
+        self.timeout_seconds = timeout_seconds if timeout_seconds is not None else settings.TRON_HTTP_TIMEOUT_SECONDS
+        self.max_retries = max_retries if max_retries is not None else settings.TRON_MAX_RETRIES
         self._external_client = http_client
 
     def _get_headers(self) -> Dict[str, str]:
