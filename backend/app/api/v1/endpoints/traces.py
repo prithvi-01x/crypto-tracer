@@ -195,6 +195,18 @@ async def start_trace(
             started_at=updated_trace.started_at,
             completed_at=updated_trace.completed_at,
         )
+    except InvalidAddressError as ex:
+        boundary_code = "INVALID_ADDRESS"
+        explanation = f"TRON address rejected: {ex}"
+        await TraceRepository.update_failed(db, trace_record.id, str(ex), boundary_code=boundary_code, investigator_summary=explanation)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": boundary_code,
+                "message": str(ex),
+                "trace_id": trace_record.id,
+            }
+        )
     except ProviderTimeoutError as ex:
         boundary_code = "PROVIDER_TIMEOUT"
         explanation = f"Blockchain provider timed out while querying suspect wallet {clean_input}. Upstream service was unresponsive after bounded retries."
