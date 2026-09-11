@@ -82,7 +82,7 @@ async def start_trace(
     if requested_mode == "DEMO" and is_canonical:
         resolved_mode = "DEMO"
     else:
-        # Standard TRON Base58 validation applies to LIVE/non-demo addresses
+        # Standard TRON Base58 validation applies to LIVE addresses and non-canonical inputs
         if trace_in.input_type == "address":
             if not validate_tron_address(clean_input):
                 raise HTTPException(
@@ -285,6 +285,7 @@ async def get_trace_status(
         input_value=trace.input_value,
         asset=trace.asset,
         max_hops=trace.max_hops,
+        execution_mode=trace.execution_mode,
         duration_ms=trace.duration_ms,
         node_count=trace.node_count,
         edge_count=trace.edge_count,
