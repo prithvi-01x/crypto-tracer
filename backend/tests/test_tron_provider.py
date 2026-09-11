@@ -209,8 +209,6 @@ async def test_api_endpoint_tron_transfers_removed(async_client):
     assert response.status_code == 404
 
 
-
-
 @pytest.mark.asyncio
 async def test_tron_provider_fallback_to_secondary_endpoint():
     """Verify TronProvider fails over to secondary endpoint when primary endpoint returns 500."""
@@ -246,3 +244,132 @@ async def test_tron_provider_fallback_to_secondary_endpoint():
         assert page.transfers[0].amount_decimal == Decimal("5500")
         assert any("primary.rpc.invalid" in c for c in calls)
         assert any("fallback.rpc.invalid" in c for c in calls)
+
+
+@pytest.mark.asyncio
+async def test_tron_provider_empty_transfers():
+    """Verify TronProvider handles empty on-chain transfer list cleanly."""
+    mock_payload = {
+        "success": True,
+        "data": [],
+        "meta": {"at": 1741700000, "page_size": 20},
+    }
+
+    mock_transport = httpx.MockTransport(lambda req: httpx.Response(200, json=mock_payload))
+    async with httpx.AsyncClient(transport=mock_transport) as client:
+        provider = TronProvider(http_client=client)
+        page = await provider.get_transfers(SAMPLE_TRON_ADDRESS)
+
+        assert len(page.transfers) == 0
+        assert page.total_fetched == 0
+        assert page.has_more is False
+        assert page.next_cursor is None
+
+
+@pytest.mark.asyncio
+async def test_tron_provider_http_400_invalid_address():
+    """Verify HTTP 400 with invalid address detail raises InvalidAddressError immediately without failover."""
+    calls = []
+
+    def mock_handler(request: httpx.Request):
+        calls.append(str(request.url))
+        return httpx.Response(400, json={"success": False, "error": "A valid account address is required."})
+
+    mock_transport = httpx.MockTransport(mock_handler)
+    async with httpx.AsyncClient(transport=mock_transport) as client:
+        provider = TronProvider(
+            base_url="https://primary.rpc.invalid",
+            fallback_urls=["https://fallback.rpc.invalid"],
+            max_retries=2,
+            http_client=client,
+        )
+        with pytest.raises(InvalidAddressError) as exc_info:
+            await provider.get_transfers(SAMPLE_TRON_ADDRESS)
+
+        assert "A valid account address is required" in str(exc_info.value)
+        # Should NOT failover to fallback endpoint on 400
+        assert len(calls) == 1
+        assert "primary.rpc.invalid" in calls[0]
+
+
+@pytest.mark.asyncio
+async def test_tron_provider_malformed_json_response():
+    """Verify non-JSON response raises BlockchainProviderError cleanly."""
+    mock_transport = httpx.MockTransport(
+        lambda req: httpx.Response(200, content=b"<!DOCTYPE html><html><body>Error 502 Bad Gateway</body></html>")
+    )
+    async with httpx.AsyncClient(transport=mock_transport) as client:
+        provider = TronProvider(max_retries=1, http_client=client)
+        with pytest.raises(BlockchainProviderError) as exc_info:
+            await provider.get_transfers(SAMPLE_TRON_ADDRESS)
+
+        assert "Malformed JSON" in str(exc_info.value) or "expected JSON object" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_tron_provider_unsuccessful_status_flag():
+    """Verify HTTP 200 with success: false raises BlockchainProviderError."""
+    mock_transport = httpx.MockTransport(
+        lambda req: httpx.Response(200, json={"success": False, "error": "Internal contract evaluation timeout"})
+    )
+    async with httpx.AsyncClient(transport=mock_transport) as client:
+        provider = TronProvider(max_retries=1, http_client=client)
+        with pytest.raises(BlockchainProviderError) as exc_info:
+            await provider.get_transfers(SAMPLE_TRON_ADDRESS)
+
+        assert "Internal contract evaluation timeout" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_trace_api_default_live_mode_and_explicit_demo_mode(async_client):
+    """
+    Verify POST /api/v1/traces:
+    1. Defaults to execution_mode="LIVE"
+    2. Respects explicit execution_mode="DEMO" without modifying live default
+    3. Never silently coerces live mode to demo
+    """
+    # 1. Create a parent case
+    case_res = await async_client.post("/api/v1/cases", json={
+        "fir_number": "FIR-2026-LIVE-DEFAULT-01",
+        "victim_reference": "VICTIM-LIVE-TEST",
+        "loss_amount_inr": 200000.0,
+    })
+    assert case_res.status_code == 201
+    case_id = case_res.json()["id"]
+
+    # 2. Trace with explicit DEMO mode on canonical demo address -> succeeds with DEMO mode
+    from backend.app.domain.demo.canonical_data import ADDR_SUSPECT_ROOT
+    demo_trace_res = await async_client.post("/api/v1/traces", json={
+        "case_id": case_id,
+        "chain": "TRON",
+        "input_type": "address",
+        "input": ADDR_SUSPECT_ROOT,
+        "asset": "TRC20:USDT",
+        "max_hops": 2,
+        "execution_mode": "DEMO",
+    })
+    assert demo_trace_res.status_code == 201
+    demo_data = demo_trace_res.json()
+    assert demo_data["execution_mode"] == "DEMO"
+    assert demo_data["status"] in ("COMPLETED", "PARTIAL")
+
+    # 3. Trace WITHOUT specifying execution_mode -> defaults to LIVE (querying TronProvider)
+    live_trace_res = await async_client.post("/api/v1/traces", json={
+        "case_id": case_id,
+        "chain": "TRON",
+        "input_type": "address",
+        "input": ADDR_SUSPECT_ROOT,
+        "asset": "TRC20:USDT",
+        "max_hops": 2,
+    })
+    # Since ADDR_SUSPECT_ROOT is a simulated demo address not on live TronGrid,
+    # live provider queries TronGrid and receives 400 (Invalid Address) or executes live.
+    # It must NOT silently return the demo fixture with execution_mode DEMO!
+    assert live_trace_res.status_code in (201, 400, 502, 504)
+    if live_trace_res.status_code == 201:
+        assert live_trace_res.json()["execution_mode"] == "LIVE"
+    elif live_trace_res.status_code == 400:
+        err_detail = live_trace_res.json()["detail"]
+        assert err_detail["code"] == "INVALID_ADDRESS"
+
+
