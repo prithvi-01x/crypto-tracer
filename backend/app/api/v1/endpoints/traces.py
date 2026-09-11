@@ -14,9 +14,12 @@ from backend.app.persistence.audit_repository import AuditRepository
 from backend.app.domain.evidence.generator import EvidenceGenerator
 from backend.app.domain.evidence.models import AuditEvent, AuditEventType
 from backend.app.domain.evidence.hasher import compute_content_hash
+from backend.app.config import settings
 from backend.app.adapters.base import (
     ProviderTimeoutError,
     ProviderRateLimitError,
+    InvalidAddressError,
+    BlockchainProviderError,
 )
 from backend.app.adapters.tron_provider import TronProvider, validate_tron_address
 from backend.app.domain.demo.canonical_data import DemoFixtureProvider, is_canonical_demo_address
