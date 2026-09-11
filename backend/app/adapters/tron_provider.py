@@ -201,13 +201,15 @@ class TronProvider(BlockchainProvider):
                     logger.warning(f"TronGrid HTTP 429 Rate Limited (attempt {attempt}/{self.max_retries})")
                     if attempt >= self.max_retries:
                         raise ProviderRateLimitError("TronGrid rate limit reached after retries.")
-                    await asyncio.sleep(backoff)
+                    jitter = random.uniform(0.1, 0.4)
+                    await asyncio.sleep(backoff + jitter)
                     backoff *= 2
                 elif response.status_code >= 500:
                     logger.warning(f"TronGrid HTTP {response.status_code} server error (attempt {attempt}/{self.max_retries})")
                     if attempt >= self.max_retries:
                         raise BlockchainProviderError(f"TronGrid server returned status {response.status_code}")
-                    await asyncio.sleep(backoff)
+                    jitter = random.uniform(0.1, 0.4)
+                    await asyncio.sleep(backoff + jitter)
                     backoff *= 2
                 else:
                     raise BlockchainProviderError(
