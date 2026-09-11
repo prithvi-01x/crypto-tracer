@@ -1103,18 +1103,6 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setTraceExecutionMode('DEMO')}
-                  className={`p-2 rounded-lg border text-xs font-bold text-left cursor-pointer transition ${
-                    traceExecutionMode === 'DEMO'
-                      ? 'border-amber-500 bg-amber-500/15 text-amber-700 dark:text-amber-400'
-                      : 'border-surface-200 text-surface-600 hover:bg-surface-50'
-                  }`}
-                >
-                  <span className="block font-bold">DEMO FIXTURE</span>
-                  <span className="text-[10px] font-normal text-surface-500">Deterministic replay</span>
-                </button>
-                <button
-                  type="button"
                   onClick={() => setTraceExecutionMode('LIVE')}
                   className={`p-2 rounded-lg border text-xs font-bold text-left cursor-pointer transition ${
                     traceExecutionMode === 'LIVE'
@@ -1124,6 +1112,18 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                 >
                   <span className="block font-bold">LIVE TRON RPC</span>
                   <span className="text-[10px] font-normal text-surface-500">On-Chain Mainnet</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTraceExecutionMode('DEMO')}
+                  className={`p-2 rounded-lg border text-xs font-bold text-left cursor-pointer transition ${
+                    traceExecutionMode === 'DEMO'
+                      ? 'border-amber-500 bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                      : 'border-surface-200 text-surface-600 hover:bg-surface-50'
+                  }`}
+                >
+                  <span className="block font-bold">DEMO FIXTURE</span>
+                  <span className="text-[10px] font-normal text-surface-500">Deterministic replay</span>
                 </button>
               </div>
             </div>
