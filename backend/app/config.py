@@ -47,6 +47,13 @@ class Settings(BaseSettings):
     TRON_MAX_RETRIES: int = 3
     BLOCKCHAIN_CACHE_TTL_SECONDS: int = 300
     REPORTS_DIR: str = "data/reports"
+
+    @field_validator("TRON_FALLBACK_API_URLS", mode="before")
+    @classmethod
+    def parse_fallback_urls(cls, v: Any) -> List[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",") if i.strip()]
+        return v or []
     
     model_config = SettingsConfigDict(
         env_file=".env",
