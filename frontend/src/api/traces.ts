@@ -17,7 +17,7 @@ export async function startTrace(input: TraceCreateInput): Promise<TraceStatus> 
       asset: input.asset || 'TRC20:USDT',
       max_hops: input.max_hops ?? 4,
       min_relevant_usd: input.min_relevant_usd ?? 1.0,
-      execution_mode: input.execution_mode || 'DEMO',
+      execution_mode: input.execution_mode || 'LIVE',
     }),
   });
 
