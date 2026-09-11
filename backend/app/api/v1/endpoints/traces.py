@@ -231,6 +231,18 @@ async def start_trace(
                 "trace_id": trace_record.id,
             }
         )
+    except BlockchainProviderError as ex:
+        boundary_code = "BLOCKCHAIN_PROVIDER_ERROR"
+        explanation = f"Blockchain provider error: {ex}"
+        await TraceRepository.update_failed(db, trace_record.id, str(ex), boundary_code=boundary_code, investigator_summary=explanation)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "code": boundary_code,
+                "message": explanation,
+                "trace_id": trace_record.id,
+            }
+        )
     except Exception as ex:
         await TraceRepository.update_failed(db, trace_record.id, str(ex))
         raise HTTPException(
