@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import random
+import re
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
@@ -19,9 +20,6 @@ from backend.app.adapters.base import (
 )
 
 logger = logging.getLogger("crypto_tracer.adapters.tron")
-
-
-import re
 
 TRON_ADDRESS_REGEX = re.compile(r"^T[1-9A-HJ-NP-Za-km-z]{33}$")
 
@@ -62,7 +60,7 @@ class TronProvider(BlockchainProvider):
         self.base_url = self.endpoints[0]
         self.api_key = api_key if api_key is not None else settings.TRON_API_KEY
         self.redis_client = redis_client
-        self.cache_ttl = cache_ttl or settings.BLOCKCHAIN_CACHE_TTL_SECONDS
+        self.cache_ttl = cache_ttl if cache_ttl is not None else settings.BLOCKCHAIN_CACHE_TTL_SECONDS
         self.timeout_seconds = timeout_seconds if timeout_seconds is not None else settings.TRON_HTTP_TIMEOUT_SECONDS
         self.max_retries = max_retries if max_retries is not None else settings.TRON_MAX_RETRIES
         self._external_client = http_client
@@ -190,14 +188,14 @@ class TronProvider(BlockchainProvider):
 
             while attempt < self.max_retries:
                 attempt += 1
-            try:
-                if self._external_client:
-                    response = await _do_fetch(self._external_client)
-                else:
-                    async with httpx.AsyncClient() as client:
-                        response = await _do_fetch(client)
+                try:
+                    if self._external_client:
+                        response = await _do_fetch(self._external_client, url)
+                    else:
+                        async with httpx.AsyncClient() as client:
+                            response = await _do_fetch(client, url)
 
-                if response.status_code == 200:
+                    if response.status_code == 200:
                         try:
                             parsed = response.json()
                         except Exception as json_err:
@@ -218,6 +216,7 @@ class TronProvider(BlockchainProvider):
 
                         raw_response = parsed
                         break
+
                     elif response.status_code == 400:
                         # TronGrid rejected address format or account - do NOT failover to next endpoint
                         err_text = response.text[:250]
@@ -228,38 +227,60 @@ class TronProvider(BlockchainProvider):
                         except Exception:
                             pass
                         raise InvalidAddressError(f"TronGrid rejected address '{address}': {err_text}")
+
                     elif response.status_code == 429:
-                    logger.warning(f"TronGrid HTTP 429 Rate Limited (attempt {attempt}/{self.max_retries})")
-                    if attempt >= self.max_retries:
-                        raise ProviderRateLimitError("TronGrid rate limit reached after retries.")
-                    jitter = random.uniform(0.1, 0.4)
-                    await asyncio.sleep(backoff + jitter)
-                    backoff *= 2
-                elif response.status_code >= 500:
-                    logger.warning(f"TronGrid HTTP {response.status_code} server error (attempt {attempt}/{self.max_retries})")
-                    if attempt >= self.max_retries:
-                        raise BlockchainProviderError(f"TronGrid server returned status {response.status_code}")
-                    jitter = random.uniform(0.1, 0.4)
-                    await asyncio.sleep(backoff + jitter)
-                    backoff *= 2
-                else:
-                    raise BlockchainProviderError(
-                        f"TronGrid request failed with HTTP {response.status_code}: {response.text[:200]}"
-                    )
-            except InvalidAddressError:
+                        logger.warning(
+                            f"TronGrid HTTP 429 Rate Limited on {endpoint_url} (attempt {attempt}/{self.max_retries})"
+                        )
+                        last_exception = ProviderRateLimitError(f"TronGrid rate limit reached on {endpoint_url}.")
+                        if attempt < self.max_retries:
+                            jitter = random.uniform(0.1, 0.4)
+                            await asyncio.sleep(backoff + jitter)
+                            backoff *= 2
+                        else:
+                            break
+
+                    elif response.status_code >= 500:
+                        logger.warning(
+                            f"TronGrid HTTP {response.status_code} server error on {endpoint_url} (attempt {attempt}/{self.max_retries})"
+                        )
+                        last_exception = BlockchainProviderError(
+                            f"TronGrid server returned status {response.status_code} on {endpoint_url}"
+                        )
+                        if attempt < self.max_retries:
+                            jitter = random.uniform(0.1, 0.4)
+                            await asyncio.sleep(backoff + jitter)
+                            backoff *= 2
+                        else:
+                            break
+
+                    else:
+                        raise BlockchainProviderError(
+                            f"TronGrid request failed with HTTP {response.status_code}: {response.text[:200]}"
+                        )
+
+                except InvalidAddressError:
                     raise
-            except httpx.TimeoutException as tex:
-                logger.warning(f"TronGrid timeout on attempt {attempt}/{self.max_retries}: {tex}")
-                if attempt >= self.max_retries:
-                    raise ProviderTimeoutError(f"TronGrid connection timed out after {self.max_retries} attempts.")
-                await asyncio.sleep(backoff)
-                backoff *= 2
-            except httpx.RequestError as rex:
-                logger.warning(f"TronGrid network error on attempt {attempt}/{self.max_retries}: {rex}")
-                if attempt >= self.max_retries:
-                    raise BlockchainProviderError(f"TronGrid network request failed: {rex}")
-                await asyncio.sleep(backoff)
-                backoff *= 2
+                except httpx.TimeoutException as tex:
+                    logger.warning(f"TronGrid timeout on {endpoint_url} (attempt {attempt}/{self.max_retries}): {tex}")
+                    last_exception = ProviderTimeoutError(
+                        f"TronGrid connection to {endpoint_url} timed out after {self.max_retries} attempts."
+                    )
+                    if attempt < self.max_retries:
+                        jitter = random.uniform(0.1, 0.4)
+                        await asyncio.sleep(backoff + jitter)
+                        backoff *= 2
+                    else:
+                        break
+                except httpx.RequestError as rex:
+                    logger.warning(f"TronGrid network error on {endpoint_url} (attempt {attempt}/{self.max_retries}): {rex}")
+                    last_exception = BlockchainProviderError(f"TronGrid network request failed on {endpoint_url}: {rex}")
+                    if attempt < self.max_retries:
+                        jitter = random.uniform(0.1, 0.4)
+                        await asyncio.sleep(backoff + jitter)
+                        backoff *= 2
+                    else:
+                        break
 
             if raw_response is not None:
                 break
