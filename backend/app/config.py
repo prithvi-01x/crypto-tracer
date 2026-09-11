@@ -37,7 +37,8 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
-    # Blockchain Ingestion (TRON / TronGrid)
+    # Execution Mode & Blockchain Ingestion (TRON / TronGrid)
+    DEFAULT_EXECUTION_MODE: str = "LIVE"
     TRON_API_BASE_URL: str = "https://api.trongrid.io"
     TRON_API_KEY: str = ""
     TRON_USDT_CONTRACT: str = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
