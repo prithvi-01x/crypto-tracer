@@ -198,8 +198,20 @@ class TronProvider(BlockchainProvider):
                         response = await _do_fetch(client)
 
                 if response.status_code == 200:
-                    raw_response = response.json()
-                    break
+                        try:
+                            parsed = response.json()
+                        except Exception as json_err:
+                            logger.warning(f"Malformed JSON from {endpoint_url}: {json_err}")
+                            last_exception = BlockchainProviderError(f"Malformed JSON response from TronGrid: {json_err}")
+                            break
+
+                        if not isinstance(parsed, dict):
+                            logger.warning(f"Unexpected non-dict response from {endpoint_url}")
+                            last_exception = BlockchainProviderError("Malformed TronGrid response: expected JSON object")
+                            break
+
+                        raw_response = parsed
+                        break
                     elif response.status_code == 400:
                         # TronGrid rejected address format or account - do NOT failover to next endpoint
                         err_text = response.text[:250]
