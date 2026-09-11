@@ -92,7 +92,8 @@ async def start_trace(
                         "message": f"Invalid TRON address format: '{clean_input}'. Expected 34-character Base58Check starting with 'T'.",
                     }
                 )
-        resolved_mode = "DEMO" if (is_canonical or requested_mode == "DEMO") else "LIVE"
+        # Never silently coerce LIVE mode to DEMO mode even for canonical addresses
+        resolved_mode = "DEMO" if requested_mode == "DEMO" else "LIVE"
 
     # Create initial trace record in PostgreSQL
     trace_record = await TraceRepository.create(
