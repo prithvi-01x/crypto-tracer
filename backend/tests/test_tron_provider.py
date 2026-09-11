@@ -208,3 +208,41 @@ async def test_api_endpoint_tron_transfers_removed(async_client):
     response = await async_client.get(f"/api/v1/blockchain/tron/transfers/{SAMPLE_TRON_ADDRESS}")
     assert response.status_code == 404
 
+
+
+
+@pytest.mark.asyncio
+async def test_tron_provider_fallback_to_secondary_endpoint():
+    """Verify TronProvider fails over to secondary endpoint when primary endpoint returns 500."""
+    primary_url = "https://primary.rpc.invalid"
+    fallback_url = "https://fallback.rpc.invalid"
+
+    calls = []
+
+    def mock_handler(request: httpx.Request):
+        url_str = str(request.url)
+        calls.append(url_str)
+        if "primary.rpc.invalid" in url_str:
+            return httpx.Response(503, text="Service Unavailable")
+        elif "fallback.rpc.invalid" in url_str:
+            return httpx.Response(200, json={
+                "success": True,
+                "data": [RAW_TRONGRID_ITEM],
+                "meta": {"fingerprint": None}
+            })
+        return httpx.Response(404)
+
+    mock_transport = httpx.MockTransport(mock_handler)
+    async with httpx.AsyncClient(transport=mock_transport) as client:
+        provider = TronProvider(
+            base_url=primary_url,
+            fallback_urls=[fallback_url],
+            max_retries=1,
+            http_client=client,
+        )
+        page = await provider.get_transfers(SAMPLE_TRON_ADDRESS)
+
+        assert len(page.transfers) == 1
+        assert page.transfers[0].amount_decimal == Decimal("5500")
+        assert any("primary.rpc.invalid" in c for c in calls)
+        assert any("fallback.rpc.invalid" in c for c in calls)
