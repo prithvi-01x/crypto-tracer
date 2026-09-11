@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     TRON_API_KEY: str = ""
     TRON_USDT_CONTRACT: str = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
     TRON_HTTP_TIMEOUT_SECONDS: float = 10.0
+    TRON_MAX_RETRIES: int = 3
     BLOCKCHAIN_CACHE_TTL_SECONDS: int = 300
     REPORTS_DIR: str = "data/reports"
     
