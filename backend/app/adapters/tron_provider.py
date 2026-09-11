@@ -210,6 +210,12 @@ class TronProvider(BlockchainProvider):
                             last_exception = BlockchainProviderError("Malformed TronGrid response: expected JSON object")
                             break
 
+                        if parsed.get("success") is False:
+                            err_msg = parsed.get("error", "Unspecified provider error")
+                            logger.warning(f"TronGrid reported failure on {endpoint_url}: {err_msg}")
+                            last_exception = BlockchainProviderError(f"TronGrid error: {err_msg}")
+                            break
+
                         raw_response = parsed
                         break
                     elif response.status_code == 400:
