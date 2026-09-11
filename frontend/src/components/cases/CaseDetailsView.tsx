@@ -814,6 +814,29 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <button
                             type="button"
+                            onClick={() => setTraceExecutionMode('LIVE')}
+                            className={`p-3 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
+                              traceExecutionMode === 'LIVE'
+                                ? 'border-emerald-500/60 bg-emerald-500/10 text-surface-900 dark:text-white ring-1 ring-emerald-500/40'
+                                : 'border-surface-200 hover:bg-surface-50 dark:hover:bg-surface-200/40 text-surface-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-bold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                LIVE TRON RPC
+                              </span>
+                              <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 rounded font-semibold">
+                                Default (Mainnet)
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-surface-500 leading-tight">
+                              Live on-chain RPC queries against TRON network. Reconstructs live wallet transfers.
+                            </p>
+                          </button>
+
+                          <button
+                            type="button"
                             onClick={() => setTraceExecutionMode('DEMO')}
                             className={`p-3 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
                               traceExecutionMode === 'DEMO'
@@ -832,29 +855,6 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
                             </div>
                             <p className="text-[11px] text-surface-500 leading-tight">
                               Offline deterministic dataset. 100% reproducible for judge/courtroom validation.
-                            </p>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setTraceExecutionMode('LIVE')}
-                            className={`p-3 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
-                              traceExecutionMode === 'LIVE'
-                                ? 'border-emerald-500/60 bg-emerald-500/10 text-surface-900 dark:text-white ring-1 ring-emerald-500/40'
-                                : 'border-surface-200 hover:bg-surface-50 dark:hover:bg-surface-200/40 text-surface-700'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-bold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                                LIVE TRON RPC
-                              </span>
-                              <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 rounded">
-                                Mainnet
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-surface-500 leading-tight">
-                              Live on-chain RPC queries against TRON network. Reconstructs live wallet transfers.
                             </p>
                           </button>
                         </div>
