@@ -67,7 +67,7 @@ export const CaseDetailsView: React.FC<CaseDetailsViewProps> = ({ caseId, onBack
   const [traceStageText, setTraceStageText] = useState<string>('');
   const [traceError, setTraceError] = useState<string | null>(null);
   const [traceWalletInput, setTraceWalletInput] = useState<string>('');
-  const [traceExecutionMode, setTraceExecutionMode] = useState<'DEMO' | 'LIVE'>('DEMO');
+  const [traceExecutionMode, setTraceExecutionMode] = useState<'DEMO' | 'LIVE'>('LIVE');
   const [traceHops, setTraceHops] = useState<number>(4);
   const [traceMinUsd, setTraceMinUsd] = useState<number>(1.0);
 
