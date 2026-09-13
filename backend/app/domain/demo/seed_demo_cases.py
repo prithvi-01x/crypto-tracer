@@ -9,6 +9,11 @@ from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import List, Dict, Any
 from sqlalchemy import select
+from backend.app.config import (
+    DEFAULT_TENANT_ID,
+    DEFAULT_DISTRICT_ID,
+    DEFAULT_POLICE_STATION_ID,
+)
 from backend.app.persistence.db import async_session_factory
 from backend.app.persistence.models import Case
 from backend.app.domain.demo.canonical_data import (
@@ -221,6 +226,9 @@ async def seed_curated_demo_cases():
                 existing.status = case_data["status"]
                 existing.created_at = case_time
                 existing.updated_at = case_time
+                existing.tenant_id = DEFAULT_TENANT_ID
+                existing.district_id = DEFAULT_DISTRICT_ID
+                existing.police_station_id = DEFAULT_POLICE_STATION_ID
             else:
                 new_case = Case(
                     id=case_id,
@@ -235,6 +243,9 @@ async def seed_curated_demo_cases():
                     status=case_data["status"],
                     created_at=case_time,
                     updated_at=case_time,
+                    tenant_id=DEFAULT_TENANT_ID,
+                    district_id=DEFAULT_DISTRICT_ID,
+                    police_station_id=DEFAULT_POLICE_STATION_ID,
                 )
                 session.add(new_case)
         await session.commit()
