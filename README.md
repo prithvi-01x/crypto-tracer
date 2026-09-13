@@ -546,6 +546,17 @@ The backend exposes 27 verified RESTful operations across 24 path templates unde
 - **PostgreSQL:** 15 or higher (running locally on port `5432`)
 - **Redis:** 7 or higher (running locally on port `6379`)
 
+### ⚡ One-Command Startup (Recommended)
+Simply run the included startup script to initialize services, verify databases, and launch both backend and frontend servers:
+```bash
+./start.sh
+```
+The workstation dashboard will be available at **`http://localhost:5173`** with backend API docs at **`http://localhost:8000/docs`**. Press `Ctrl+C` anytime to terminate all services cleanly.
+
+---
+
+### Manual Step-by-Step Setup
+
 ### 1. Install Backend Dependencies
 ```bash
 # Create and activate virtual environment

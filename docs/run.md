@@ -27,7 +27,26 @@ Ensure the following tools are installed on your host system:
 
 ---
 
-## 🚀 Quick Start (Step-by-Step)
+## ⚡ One-Command Startup (Recommended)
+
+You can launch the entire platform with a single command:
+
+```bash
+./start.sh
+```
+
+`start.sh` automatically:
+1. Verifies/starts **Redis** (`6379`) and **PostgreSQL** (`5432`).
+2. Verifies the `crypto_tracer` database and initializes tables.
+3. Sets up Python virtualenv and installs dependencies if needed.
+4. Launches the **FastAPI backend** (`http://localhost:8000`).
+5. Launches the **Vite React frontend** (`http://localhost:5173`).
+6. Runs health probes and presents an interactive CLI status dashboard.
+7. Gracefully stops all processes on `Ctrl+C`.
+
+---
+
+## 🚀 Manual Step-by-Step Setup
 
 ### Step 1: Configure Environment Variables
 
