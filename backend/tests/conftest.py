@@ -5,6 +5,8 @@ from backend.app.main import app
 from backend.app.persistence.models import Base
 from backend.app.persistence.db import get_db
 
+from backend.app.persistence.redis import get_redis
+
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
@@ -32,6 +34,7 @@ async def async_client(test_engine):
             yield session
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_redis] = lambda: None
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
