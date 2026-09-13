@@ -1,29 +1,16 @@
-from fastapi import APIRouter
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends
+from backend.app.core.auth import OfficerSession
+from backend.app.api.deps import get_current_officer
 
 router = APIRouter(tags=["Auth"])
 
 
-class OfficerSession(BaseModel):
-    officer_id: str
-    name: str
-    badge_number: str
-    unit: str
-    role: str
-    is_authenticated: bool
-
-
 @router.get("/auth/me", response_model=OfficerSession)
-async def get_current_officer():
+async def get_current_officer_endpoint(
+    current_officer: OfficerSession = Depends(get_current_officer),
+) -> OfficerSession:
     """
-    Mocked authentication endpoint for SIH prototype.
-    Returns the active investigator profile without external SSO dependency.
+    Returns the active investigator profile and tenant context.
+    Decodes OIDC/JWT RS256/HS256 tokens or falls back to development mock session.
     """
-    return OfficerSession(
-        officer_id="OFFICER-DL-812",
-        name="Inspector P. Sharma",
-        badge_number="CYBER-DELHI-4029",
-        unit="District Cyber Crime Cell, IFSO Unit",
-        role="INVESTIGATING_OFFICER",
-        is_authenticated=True,
-    )
+    return current_officer
