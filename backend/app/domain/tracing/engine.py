@@ -1,3 +1,4 @@
+import asyncio
 import time
 import logging
 from collections import deque
@@ -67,6 +68,8 @@ class GraphEngine:
         self,
         source_address: str,
         asset_contract: Optional[str] = None,
+        progress_callback: Optional[Any] = None,
+        cancel_checker: Optional[Any] = None,
     ) -> InvestigationGraph:
         start_time = time.perf_counter()
         source = source_address.strip()
@@ -315,6 +318,31 @@ class GraphEngine:
                 G.nodes[current_addr]["transaction_count"] += 1
                 G.nodes[dest]["total_received"] += tx.amount_decimal
                 G.nodes[dest]["transaction_count"] += 1
+
+            if cancel_checker:
+                try:
+                    is_canc = cancel_checker()
+                    if asyncio.iscoroutine(is_canc):
+                        is_canc = await is_canc
+                    if is_canc:
+                        is_partial = True
+                        break
+                except Exception as canc_err:
+                    logger.warning(f"Cancel checker error: {canc_err}")
+
+            if progress_callback:
+                try:
+                    cb_res = progress_callback(
+                        hop=current_hop,
+                        max_hops=self.max_hops,
+                        nodes=G.number_of_nodes(),
+                        edges=G.number_of_edges(),
+                        pruned=len(all_pruned_records),
+                    )
+                    if asyncio.iscoroutine(cb_res):
+                        await cb_res
+                except Exception as cb_err:
+                    logger.warning(f"Progress callback error: {cb_err}")
 
         elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
