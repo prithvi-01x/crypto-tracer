@@ -43,3 +43,8 @@ class CaseResponse(CaseBase):
 class CaseListResponse(BaseModel):
     total: int
     cases: List[CaseResponse]
+    items: List[CaseResponse] = Field(default_factory=list)
+    next_cursor: Optional[str] = None
+    has_more: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
