@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status, Depends
 
 import redis.asyncio as aioredis
+from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.persistence.db import get_db, async_session_factory
 from backend.app.persistence.redis import redis_pool
 from backend.app.persistence.trace_repository import TraceRepository
