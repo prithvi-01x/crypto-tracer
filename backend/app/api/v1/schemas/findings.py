@@ -64,6 +64,38 @@ class FindingResponse(BaseModel):
             graph_edge_id=f.graph_edge_id,
         )
 
+    @classmethod
+    def from_record(cls, r: Any) -> "FindingResponse":
+        ev_refs = []
+        if getattr(r, "evidence_refs", None):
+            for ref in r.evidence_refs:
+                if isinstance(ref, dict):
+                    ev_refs.append(EvidenceReferenceSchema(**ref))
+                elif hasattr(ref, "model_dump"):
+                    ev_refs.append(EvidenceReferenceSchema(**ref.model_dump()))
+        return cls(
+            finding_id=r.id,
+            case_id=r.case_id,
+            trace_id=r.trace_id or "",
+            severity=r.severity,
+            finding_type=r.finding_type,
+            title=r.title,
+            description=r.description,
+            timestamp=r.created_at,
+            source_signal=r.source_signal,
+            confidence=float(r.confidence) if r.confidence is not None else None,
+            related_address=r.related_address,
+            related_tx_hash=r.related_tx_hash,
+            related_vasp=r.related_vasp,
+            evidence_refs=ev_refs,
+            status=r.status,
+            reviewed_by=r.reviewed_by,
+            reviewed_at=r.reviewed_at,
+            review_notes=r.review_notes,
+            graph_node_id=r.graph_node_id,
+            graph_edge_id=r.graph_edge_id,
+        )
+
 
 class FindingReviewRequest(BaseModel):
     status: FindingStatus = Field(..., description="Target status: OPEN, REVIEWED, or DISMISSED")
@@ -84,3 +116,8 @@ class FindingListResponse(BaseModel):
     low_count: int = 0
     info_count: int = 0
     findings: List[FindingResponse] = Field(default_factory=list)
+    items: List[FindingResponse] = Field(default_factory=list)
+    next_cursor: Optional[str] = None
+    has_more: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
