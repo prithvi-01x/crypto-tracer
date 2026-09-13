@@ -9,7 +9,6 @@ from backend.app.persistence.case_repository import CaseRepository
 from backend.app.persistence.trace_repository import TraceRepository
 from backend.app.persistence.evidence_repository import EvidenceRepository
 from backend.app.persistence.audit_repository import AuditRepository
-from backend.app.persistence.attribution_repository import AttributionRepository
 from backend.app.domain.models import InvestigationGraph
 from backend.app.domain.attribution.engine import AttributionEngine
 from backend.app.domain.evidence.models import AuditEvent, AuditEventType
@@ -22,7 +21,10 @@ from backend.app.api.v1.schemas.evidence import (
     AuditEventResponse,
     AttributionReviewRequest,
     AttributionReviewResponse,
+    ChainVerificationResponse,
 )
+from backend.app.core.auth import Role, OfficerSession
+from backend.app.api.deps import get_current_officer, require_roles
 
 router = APIRouter(tags=["Evidence & Audit"])
 
@@ -31,21 +33,34 @@ router = APIRouter(tags=["Evidence & Audit"])
 async def get_trace_evidence(
     trace_id: str,
     classification: Optional[str] = Query(None, description="Filter by OBSERVED, DERIVED, INFERRED, HUMAN_ACTION"),
+    cursor: Optional[str] = Query(None, description="Base64 keyset pagination cursor"),
+    limit: int = Query(50, ge=1, le=100, description="Maximum evidence items to return"),
     db: AsyncSession = Depends(get_db),
+    current_officer: OfficerSession = Depends(get_current_officer),
 ):
     """
-    Retrieve the complete structured evidence chain and provenance DAG for a trace.
+    Retrieve the structured evidence chain and provenance DAG for a trace.
     If evidence has not yet been compiled for this trace, generates it on-demand from the graph and attribution report.
+    Supports keyset pagination with cursor.
+    Enforces tenant boundaries; cross-tenant lookup returns HTTP 404.
     """
-    trace = await TraceRepository.get_by_id(db, trace_id)
+    trace = await TraceRepository.get_by_id(db, trace_id, tenant_id=current_officer.tenant_id)
     if not trace:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Trace '{trace_id}' not found."
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Trace '{trace_id}' not found.",
+            }
         )
 
-    # Check if evidence items already exist
-    existing_items = await EvidenceRepository.get_by_trace_id(db, trace_id, classification=classification)
+    # Check if evidence items already exist for this tenant
+    existing_items = await EvidenceRepository.get_by_trace_id(
+        db,
+        trace_id,
+        classification=classification,
+        tenant_id=current_officer.tenant_id,
+    )
 
     if not existing_items and trace.graph_data:
         # Reconstruct graph and attribution report to generate complete evidence
@@ -60,15 +75,39 @@ async def get_trace_evidence(
             attribution_report=report,
             config_snapshot=trace.config,
         )
-        await EvidenceRepository.save_evidence_items(db, generated_items)
-        existing_items = await EvidenceRepository.get_by_trace_id(db, trace_id, classification=classification)
+        await EvidenceRepository.save_evidence_items(
+            db,
+            generated_items,
+            tenant_id=current_officer.tenant_id,
+            district_id=current_officer.district_id,
+            police_station_id=current_officer.police_station_id,
+        )
 
-    all_trace_items = await EvidenceRepository.get_by_trace_id(db, trace_id)
+    all_trace_items = await EvidenceRepository.get_by_trace_id(
+        db,
+        trace_id,
+        tenant_id=current_officer.tenant_id,
+    )
 
     observed_c = sum(1 for it in all_trace_items if it.classification == "OBSERVED")
     derived_c = sum(1 for it in all_trace_items if it.classification == "DERIVED")
     inferred_c = sum(1 for it in all_trace_items if it.classification == "INFERRED")
     human_c = sum(1 for it in all_trace_items if it.classification == "HUMAN_ACTION")
+
+    try:
+        page_items, total, next_cursor, has_more = await EvidenceRepository.get_by_trace_id_keyset(
+            db,
+            trace_id,
+            cursor=cursor,
+            limit=limit,
+            classification=classification,
+            tenant_id=current_officer.tenant_id,
+        )
+    except ValueError as ex:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "INVALID_CURSOR", "message": str(ex)},
+        )
 
     return EvidenceChainResponse(
         trace_id=trace.id,
@@ -98,8 +137,11 @@ async def get_trace_evidence(
                 analysis_timestamp=it.analysis_timestamp,
                 created_at=it.created_at,
             )
-            for it in existing_items
+            for it in page_items
         ],
+        total=total,
+        next_cursor=next_cursor,
+        has_more=has_more,
     )
 
 
@@ -108,25 +150,31 @@ async def record_audit_event(
     case_id: str,
     event_in: AuditEventCreateRequest,
     db: AsyncSession = Depends(get_db),
+    current_officer: OfficerSession = Depends(require_roles([Role.INVESTIGATING_OFFICER, Role.SUPERVISOR, Role.ADMIN])),
 ):
     """
     Record an immutable investigator action in the case audit log.
     Computes a cryptographic SHA-256 content hash for tamper-evident verification.
+    Enforces tenant boundaries; cross-tenant creation returns HTTP 404.
     """
-    case = await CaseRepository.get_by_id(db, case_id)
+    case = await CaseRepository.get_by_id(db, case_id, tenant_id=current_officer.tenant_id)
     if not case:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Case '{case_id}' not found."
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Case '{case_id}' not found.",
+            }
         )
 
+    actor_id = event_in.actor_id or current_officer.officer_id or "investigator"
     now = datetime.now(timezone.utc)
     event_id = str(uuid.uuid4())
 
     hash_payload = {
         "event_id": event_id,
         "case_id": case_id,
-        "actor_id": event_in.actor_id,
+        "actor_id": actor_id,
         "event_type": event_in.event_type,
         "action_summary": event_in.action_summary,
         "metadata": event_in.metadata,
@@ -138,7 +186,7 @@ async def record_audit_event(
         id=event_id,
         case_id=case_id,
         trace_id=event_in.trace_id,
-        actor_id=event_in.actor_id,
+        actor_id=actor_id,
         event_type=event_in.event_type,
         action_summary=event_in.action_summary,
         metadata=event_in.metadata,
@@ -146,7 +194,13 @@ async def record_audit_event(
         created_at=now,
     )
 
-    saved_model = await AuditRepository.record_event(db, audit_domain)
+    saved_model = await AuditRepository.record_event(
+        db,
+        audit_domain,
+        tenant_id=current_officer.tenant_id,
+        district_id=current_officer.district_id,
+        police_station_id=current_officer.police_station_id,
+    )
 
     return AuditEventResponse(
         id=saved_model.id,
@@ -165,18 +219,23 @@ async def record_audit_event(
 async def list_case_audit_events(
     case_id: str,
     db: AsyncSession = Depends(get_db),
+    current_officer: OfficerSession = Depends(get_current_officer),
 ):
     """
     Retrieve the chronological, append-only investigator audit trail for a case.
+    Enforces tenant boundaries; cross-tenant lookup returns HTTP 404.
     """
-    case = await CaseRepository.get_by_id(db, case_id)
+    case = await CaseRepository.get_by_id(db, case_id, tenant_id=current_officer.tenant_id)
     if not case:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Case '{case_id}' not found."
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Case '{case_id}' not found.",
+            }
         )
 
-    events = await AuditRepository.get_by_case_id(db, case_id)
+    events = await AuditRepository.get_by_case_id(db, case_id, tenant_id=current_officer.tenant_id)
 
     return [
         AuditEventResponse(
@@ -200,17 +259,21 @@ async def review_attribution_hypothesis(
     candidate_address: str,
     review_in: AttributionReviewRequest,
     db: AsyncSession = Depends(get_db),
+    current_officer: OfficerSession = Depends(require_roles([Role.INVESTIGATING_OFFICER, Role.SUPERVISOR, Role.ADMIN])),
 ):
     """
     Human Investigator Decision Gate: Formally ACCEPT or REJECT an automated VASP attribution hypothesis.
     Creates an append-only audit event and an immutable HUMAN_ACTION evidence item linked to the attribution.
-    Preserves human-in-the-loop legal accountability.
+    Enforces tenant boundaries; cross-tenant review returns HTTP 404.
     """
-    case = await CaseRepository.get_by_id(db, case_id)
+    case = await CaseRepository.get_by_id(db, case_id, tenant_id=current_officer.tenant_id)
     if not case:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Case '{case_id}' not found."
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Case '{case_id}' not found.",
+            }
         )
 
     decision_clean = review_in.decision.upper().strip()
@@ -220,12 +283,13 @@ async def review_attribution_hypothesis(
             detail=f"Invalid decision '{review_in.decision}'. Expected 'ACCEPT' or 'REJECT'."
         )
 
+    actor_id = review_in.actor_id or current_officer.officer_id or "investigator"
     now = datetime.now(timezone.utc)
     event_type = AuditEventType.ATTRIBUTION_ACCEPTED if decision_clean == "ACCEPT" else AuditEventType.ATTRIBUTION_REJECTED
     action_desc = (
-        f"Investigator {review_in.actor_id} ACCEPTED attribution hypothesis for wallet {candidate_address}."
+        f"Investigator {actor_id} ACCEPTED attribution hypothesis for wallet {candidate_address}."
         if decision_clean == "ACCEPT"
-        else f"Investigator {review_in.actor_id} REJECTED attribution hypothesis for wallet {candidate_address} as inconclusive."
+        else f"Investigator {actor_id} REJECTED attribution hypothesis for wallet {candidate_address} as inconclusive."
     )
     if review_in.notes:
         action_desc += f" Justification: {review_in.notes}"
@@ -239,7 +303,7 @@ async def review_attribution_hypothesis(
     content_hash = compute_content_hash({
         "event_id": event_id,
         "case_id": case_id,
-        "actor_id": review_in.actor_id,
+        "actor_id": actor_id,
         "decision": decision_clean,
         "candidate_address": candidate_address,
         "timestamp": now.isoformat(),
@@ -249,21 +313,33 @@ async def review_attribution_hypothesis(
         id=event_id,
         case_id=case_id,
         trace_id=review_in.trace_id,
-        actor_id=review_in.actor_id,
+        actor_id=actor_id,
         event_type=event_type,
         action_summary=action_desc,
         metadata=meta,
         content_hash=content_hash,
         created_at=now,
     )
-    await AuditRepository.record_event(db, audit_domain)
+    await AuditRepository.record_event(
+        db,
+        audit_domain,
+        tenant_id=current_officer.tenant_id,
+        district_id=current_officer.district_id,
+        police_station_id=current_officer.police_station_id,
+    )
 
     # Also create a HUMAN_ACTION tier evidence item
     human_ev = EvidenceGenerator.generate_human_action_evidence(
         audit_event=audit_domain,
         parent_evidence_id=f"ev_sweep_{candidate_address[:16]}",
     )
-    await EvidenceRepository.save_evidence_items(db, [human_ev])
+    await EvidenceRepository.save_evidence_items(
+        db,
+        [human_ev],
+        tenant_id=current_officer.tenant_id,
+        district_id=current_officer.district_id,
+        police_station_id=current_officer.police_station_id,
+    )
 
     return AttributionReviewResponse(
         status="SUCCESS",
@@ -273,3 +349,56 @@ async def review_attribution_hypothesis(
         audit_event_id=event_id,
         reviewed_at=now,
     )
+
+
+@router.get("/cases/{case_id}/evidence/verify-integrity", response_model=ChainVerificationResponse)
+async def verify_case_evidence_integrity(
+    case_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_officer: OfficerSession = Depends(
+        require_roles([Role.INVESTIGATING_OFFICER, Role.SUPERVISOR, Role.ADMIN, Role.AUDITOR])
+    ),
+):
+    """
+    Forensic Chain Integrity Verification API for Case Evidence Items.
+    Walks the cryptographic hash chain from Genesis anchor (Sequence 1) to head.
+    Detects single-byte payload tampering, timestamp alterations, actor modifications, or sequence gaps.
+    Enforces tenant boundaries; cross-tenant lookup returns HTTP 404 (IDOR proof).
+    """
+    case = await CaseRepository.get_by_id(db, case_id, tenant_id=current_officer.tenant_id)
+    if not case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Investigation case '{case_id}' not found.",
+            },
+        )
+    return await EvidenceRepository.verify_integrity(db, case_id, tenant_id=current_officer.tenant_id)
+
+
+@router.get("/cases/{case_id}/audit/verify-integrity", response_model=ChainVerificationResponse)
+async def verify_case_audit_integrity(
+    case_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_officer: OfficerSession = Depends(
+        require_roles([Role.INVESTIGATING_OFFICER, Role.SUPERVISOR, Role.ADMIN, Role.AUDITOR])
+    ),
+):
+    """
+    Forensic Chain Integrity Verification API for Investigator Audit Trail.
+    Walks the cryptographic hash chain from Genesis anchor (Sequence 1) to head.
+    Detects any modification or deletion in the audit trail.
+    Enforces tenant boundaries; cross-tenant lookup returns HTTP 404 (IDOR proof).
+    """
+    case = await CaseRepository.get_by_id(db, case_id, tenant_id=current_officer.tenant_id)
+    if not case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "NOT_FOUND",
+                "message": f"Investigation case '{case_id}' not found.",
+            },
+        )
+    return await AuditRepository.verify_integrity(db, case_id, tenant_id=current_officer.tenant_id)
+
