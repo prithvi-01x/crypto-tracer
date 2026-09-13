@@ -1,6 +1,40 @@
 from datetime import datetime
+from enum import Enum
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
+
+
+class ChainVerificationStatus(str, Enum):
+    VALID = "VALID"
+    TAMPERED = "TAMPERED"
+    EMPTY = "EMPTY"
+
+
+class ChainVerificationMismatch(BaseModel):
+    failure_reason: str = Field(..., description="Failure class: HASH_MISMATCH, CHAIN_LINK_BROKEN, SEQUENCE_DISCONTINUITY, PAYLOAD_TAMPERED, GENESIS_HASH_MISMATCH")
+    expected_hash: Optional[str] = Field(None, description="Expected cryptographic hash")
+    actual_hash: Optional[str] = Field(None, description="Actual hash encountered in storage")
+    expected_sequence: Optional[int] = Field(None, description="Expected sequence number")
+    actual_sequence: Optional[int] = Field(None, description="Actual sequence number encountered")
+    message: str = Field(..., description="Detailed diagnostic description of integrity corruption")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ChainVerificationResponse(BaseModel):
+    status: ChainVerificationStatus = Field(..., description="Integrity status: VALID, TAMPERED, or EMPTY")
+    case_id: str = Field(..., description="Case identifier")
+    chain_type: str = Field(..., description="'evidence' or 'audit'")
+    total_records: int = Field(..., description="Total records evaluated in the chain")
+    corrupted_sequence: Optional[int] = Field(None, description="1-indexed sequence number of corrupted item if TAMPERED")
+    corrupted_record_id: Optional[str] = Field(None, description="Identifier of the corrupted record")
+    genesis_hash: str = Field(..., description="Genesis block anchor: SHA256('GENESIS:' || case_id)")
+    head_hash: Optional[str] = Field(None, description="Current cryptographic head hash of the ledger")
+    details: Optional[ChainVerificationMismatch] = Field(None, description="Details of corruption if TAMPERED")
+    verified_at: datetime = Field(..., description="Timestamp when verification completed")
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 
 class EvidenceItemResponse(BaseModel):
@@ -34,6 +68,9 @@ class EvidenceChainResponse(BaseModel):
     inferred_count: int
     human_action_count: int
     items: List[EvidenceItemResponse]
+    total: Optional[int] = None
+    next_cursor: Optional[str] = None
+    has_more: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
