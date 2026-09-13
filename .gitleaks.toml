@@ -1,0 +1,19 @@
+title = "Crypto-Tracer Gitleaks Configuration"
+
+[allowlist]
+description = "Allowlisted test fixtures, mock data, and documentation"
+paths = [
+  '''backend/tests/.*''',
+  '''tests/.*''',
+  '''backend/app/domain/demo/canonical_data\.py''',
+  '''\.agents/.*''',
+  '''README\.md''',
+  '''docs/.*''',
+  '''\.env\.example''',
+]
+regexes = [
+  '''FIR-2026-.*''',
+  '''1930/.*''',
+  '''T[A-Za-z0-9]{33}''',
+  '''insecure-dev-secret-key-change-me-for-production-use-only-0000''',
+]
