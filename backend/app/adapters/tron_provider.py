@@ -17,7 +17,12 @@ from backend.app.adapters.base import (
     ProviderRateLimitError,
     ProviderTimeoutError,
     InvalidAddressError,
+    CircuitBreakerOpenError,
+    NodeExhaustionError,
+    TransactionExecutionError,
 )
+from backend.app.adapters.cache import TwoTierBlockchainCache
+from backend.app.adapters.failover_pool import RpcFailoverPool
 
 logger = logging.getLogger("crypto_tracer.adapters.tron")
 
@@ -58,12 +63,32 @@ class TronProvider(BlockchainProvider):
                 self.endpoints.append(u)
 
         self.base_url = self.endpoints[0]
-        self.api_key = api_key if api_key is not None else settings.TRON_API_KEY
+        raw_key = api_key if api_key is not None else settings.TRON_API_KEY
+        self.api_key = (
+            raw_key.get_secret_value()
+            if hasattr(raw_key, "get_secret_value")
+            else (raw_key or "")
+        )
         self.redis_client = redis_client
         self.cache_ttl = cache_ttl if cache_ttl is not None else settings.BLOCKCHAIN_CACHE_TTL_SECONDS
         self.timeout_seconds = timeout_seconds if timeout_seconds is not None else settings.TRON_HTTP_TIMEOUT_SECONDS
         self.max_retries = max_retries if max_retries is not None else settings.TRON_MAX_RETRIES
         self._external_client = http_client
+
+        # Feature 29: Two-Tier Cache (L1 LRU + L2 Redis)
+        self.cache = TwoTierBlockchainCache(
+            redis_client=redis_client,
+            default_ttl=self.cache_ttl,
+            finalized_ttl=86400,
+        )
+
+        # Feature 28: Multi-Node RPC Failover Pool with Circuit Breakers
+        self.failover_pool = RpcFailoverPool(
+            primary_url=self.endpoints[0],
+            fallback_urls=self.endpoints[1:] if len(self.endpoints) > 1 else None,
+            timeout_seconds=self.timeout_seconds,
+            max_retries_per_node=self.max_retries,
+        )
 
     def _get_headers(self) -> Dict[str, str]:
         headers = {
@@ -82,19 +107,51 @@ class TronProvider(BlockchainProvider):
         limit: int,
         direction: Optional[str],
     ) -> str:
-        c_part = cursor or "head"
-        d_part = direction or "all"
-        return f"tron:trc20:{address}:{asset_contract}:{d_part}:{limit}:{c_part}"
+        return self.cache.build_key(
+            chain="tron",
+            address=address,
+            asset_contract=asset_contract,
+            direction=direction,
+            limit=limit,
+            cursor=cursor,
+        )
 
     def normalize_transfer(self, item: Dict[str, Any], default_contract: str) -> Optional[Transfer]:
         """
         Transform a raw TronGrid TRC-20 item into our internal domain Transfer model.
-        Isolates provider-specific fields.
+        Hardened against reverted transactions, non-Transfer events, and malformed inputs.
         """
         try:
             tx_hash = item.get("transaction_id")
             if not tx_hash:
                 return None
+
+            # 1. Hardening Check: Filter non-Transfer events (e.g. Approval)
+            event_type = item.get("type", "Transfer")
+            if event_type and str(event_type).strip().lower() != "transfer":
+                logger.warning(f"Discarding non-transfer event {tx_hash}: type={event_type}")
+                return None
+
+            # 2. Hardening Check: Inspect transaction execution status (ret / contractRet)
+            ret_list = item.get("ret")
+            if isinstance(ret_list, list) and len(ret_list) > 0:
+                ret_obj = ret_list[0]
+                if isinstance(ret_obj, dict):
+                    contract_ret = ret_obj.get("contractRet") or ret_obj.get("ret")
+                    if contract_ret and str(contract_ret).upper() not in ("SUCCESS", "1"):
+                        logger.warning(
+                            f"Discarding reverted TRON transaction {tx_hash}: contractRet={contract_ret}"
+                        )
+                        return None
+
+            # 3. Hardening Check: Inspect top-level status/result flags
+            for flag in ("contract_ret", "contractRet", "finalResult", "result", "status"):
+                val = item.get(flag)
+                if val is not None and str(val).upper() in (
+                    "REVERT", "FAILED", "OUT_OF_ENERGY", "OUT_OF_TIME", "FAILURE", "FAIL"
+                ):
+                    logger.warning(f"Discarding failed TRON transaction {tx_hash}: {flag}={val}")
+                    return None
 
             token_info = item.get("token_info", {})
             decimals = int(token_info.get("decimals", 6))
@@ -103,6 +160,9 @@ class TronProvider(BlockchainProvider):
 
             value_str = str(item.get("value", "0"))
             amount_raw = int(value_str)
+            if amount_raw <= 0:
+                return None
+
             amount_decimal = Decimal(amount_raw) / Decimal(10 ** decimals)
 
             block_timestamp = item.get("block_timestamp", 0)
@@ -132,6 +192,9 @@ class TronProvider(BlockchainProvider):
             logger.warning(f"Failed to normalize TronGrid item: {ex}, payload: {item}")
             return None
 
+    def validate_address(self, address: str) -> bool:
+        return validate_tron_address(address)
+
     async def get_transfers(
         self,
         address: str,
@@ -147,18 +210,11 @@ class TronProvider(BlockchainProvider):
         target_contract = asset_contract or settings.TRON_USDT_CONTRACT
         clamped_limit = min(max(limit, 1), 200)
 
-        # 1. Check Redis Cache
+        # 1. Check Two-Tier Cache
         cache_key = self._build_cache_key(address, target_contract, cursor, clamped_limit, direction)
-        if self.redis_client:
-            try:
-                cached_data = await self.redis_client.get(cache_key)
-                if cached_data:
-                    logger.debug(f"Redis cache hit for {cache_key}")
-                    page_dict = json.loads(cached_data)
-                    page_dict["cached"] = True
-                    return TransferPage(**page_dict)
-            except Exception as e:
-                logger.warning(f"Redis cache read error: {e}")
+        cached_page = await self.cache.get(cache_key)
+        if cached_page is not None:
+            return cached_page
 
         # 2. Build Query Parameters
         params: Dict[str, Any] = {
@@ -174,126 +230,14 @@ class TronProvider(BlockchainProvider):
 
         headers = self._get_headers()
 
-        # 3. HTTP Request across configured endpoints with Bounded Retries & Jittered Backoff
-        raw_response: Optional[Dict[str, Any]] = None
-        last_exception: Optional[Exception] = None
-
-        for endpoint_idx, endpoint_url in enumerate(self.endpoints):
-            url = f"{endpoint_url}/v1/accounts/{address}/transactions/trc20"
-            attempt = 0
-            backoff = 0.5
-
-            async def _do_fetch(client: httpx.AsyncClient, target_url: str = url):
-                return await client.get(target_url, params=params, headers=headers, timeout=self.timeout_seconds)
-
-            while attempt < self.max_retries:
-                attempt += 1
-                try:
-                    if self._external_client:
-                        response = await _do_fetch(self._external_client, url)
-                    else:
-                        async with httpx.AsyncClient() as client:
-                            response = await _do_fetch(client, url)
-
-                    if response.status_code == 200:
-                        try:
-                            parsed = response.json()
-                        except Exception as json_err:
-                            logger.warning(f"Malformed JSON from {endpoint_url}: {json_err}")
-                            last_exception = BlockchainProviderError(f"Malformed JSON response from TronGrid: {json_err}")
-                            break
-
-                        if not isinstance(parsed, dict):
-                            logger.warning(f"Unexpected non-dict response from {endpoint_url}")
-                            last_exception = BlockchainProviderError("Malformed TronGrid response: expected JSON object")
-                            break
-
-                        if parsed.get("success") is False:
-                            err_msg = parsed.get("error", "Unspecified provider error")
-                            logger.warning(f"TronGrid reported failure on {endpoint_url}: {err_msg}")
-                            last_exception = BlockchainProviderError(f"TronGrid error: {err_msg}")
-                            break
-
-                        raw_response = parsed
-                        break
-
-                    elif response.status_code == 400:
-                        # TronGrid rejected address format or account - do NOT failover to next endpoint
-                        err_text = response.text[:250]
-                        try:
-                            err_json = response.json()
-                            if isinstance(err_json, dict) and "error" in err_json:
-                                err_text = str(err_json["error"])
-                        except Exception:
-                            pass
-                        raise InvalidAddressError(f"TronGrid rejected address '{address}': {err_text}")
-
-                    elif response.status_code == 429:
-                        logger.warning(
-                            f"TronGrid HTTP 429 Rate Limited on {endpoint_url} (attempt {attempt}/{self.max_retries})"
-                        )
-                        last_exception = ProviderRateLimitError(f"TronGrid rate limit reached on {endpoint_url}.")
-                        if attempt < self.max_retries:
-                            jitter = random.uniform(0.1, 0.4)
-                            await asyncio.sleep(backoff + jitter)
-                            backoff *= 2
-                        else:
-                            break
-
-                    elif response.status_code >= 500:
-                        logger.warning(
-                            f"TronGrid HTTP {response.status_code} server error on {endpoint_url} (attempt {attempt}/{self.max_retries})"
-                        )
-                        last_exception = BlockchainProviderError(
-                            f"TronGrid server returned status {response.status_code} on {endpoint_url}"
-                        )
-                        if attempt < self.max_retries:
-                            jitter = random.uniform(0.1, 0.4)
-                            await asyncio.sleep(backoff + jitter)
-                            backoff *= 2
-                        else:
-                            break
-
-                    else:
-                        raise BlockchainProviderError(
-                            f"TronGrid request failed with HTTP {response.status_code}: {response.text[:200]}"
-                        )
-
-                except InvalidAddressError:
-                    raise
-                except httpx.TimeoutException as tex:
-                    logger.warning(f"TronGrid timeout on {endpoint_url} (attempt {attempt}/{self.max_retries}): {tex}")
-                    last_exception = ProviderTimeoutError(
-                        f"TronGrid connection to {endpoint_url} timed out after {self.max_retries} attempts."
-                    )
-                    if attempt < self.max_retries:
-                        jitter = random.uniform(0.1, 0.4)
-                        await asyncio.sleep(backoff + jitter)
-                        backoff *= 2
-                    else:
-                        break
-                except httpx.RequestError as rex:
-                    logger.warning(f"TronGrid network error on {endpoint_url} (attempt {attempt}/{self.max_retries}): {rex}")
-                    last_exception = BlockchainProviderError(f"TronGrid network request failed on {endpoint_url}: {rex}")
-                    if attempt < self.max_retries:
-                        jitter = random.uniform(0.1, 0.4)
-                        await asyncio.sleep(backoff + jitter)
-                        backoff *= 2
-                    else:
-                        break
-
-            if raw_response is not None:
-                break
-            else:
-                if endpoint_idx < len(self.endpoints) - 1:
-                    logger.warning(
-                        f"Endpoint {endpoint_url} exhausted; failing over to {self.endpoints[endpoint_idx + 1]}"
-                    )
-
-        if raw_response is None:
-            if last_exception:
-                raise last_exception
-            raise BlockchainProviderError("No response received from any configured TRON provider endpoint.")
+        # 3. HTTP Request via Multi-Node Failover Pool with Circuit Breaker
+        path = f"/v1/accounts/{address}/transactions/trc20"
+        raw_response = await self.failover_pool.execute_request(
+            path=path,
+            params=params,
+            headers=headers,
+            http_client=self._external_client,
+        )
 
         # 4. Normalize and Deduplicate Transfers
         data_items = raw_response.get("data", [])
@@ -325,16 +269,21 @@ class TronProvider(BlockchainProvider):
             total_fetched=len(normalized_transfers),
         )
 
-        # 6. Store in Redis Cache
-        if self.redis_client and self.cache_ttl > 0:
-            try:
-                # Use model_dump_json to serialize
-                await self.redis_client.setex(
-                    cache_key,
-                    self.cache_ttl,
-                    result_page.model_dump_json()
-                )
-            except Exception as e:
-                logger.warning(f"Failed to cache TronGrid transfers to Redis: {e}")
+        # 6. Store in Two-Tier Cache (Finalized if pagination cursor is present)
+        is_finalized = bool(next_fingerprint or cursor)
+        await self.cache.set(
+            key=cache_key,
+            page=result_page,
+            is_finalized=is_finalized,
+        )
 
         return result_page
+
+    async def health_check(self) -> Dict[str, Any]:
+        node_healths = [n.get_health() for n in self.failover_pool.nodes]
+        any_healthy = any(n["status"] == "HEALTHY" for n in node_healths)
+        return {
+            "status": "HEALTHY" if any_healthy else ("DEGRADED" if any(n["status"] == "DEGRADED" for n in node_healths) else "UNHEALTHY"),
+            "nodes": node_healths,
+            "primary": self.base_url,
+        }
