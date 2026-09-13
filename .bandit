@@ -1,0 +1,4 @@
+[bandit]
+targets = backend/app
+exclude = backend/tests,tests,venv,.venv,.agents,frontend,data,chainalysis-reactor-clone
+skips = 
