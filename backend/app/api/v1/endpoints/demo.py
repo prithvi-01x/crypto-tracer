@@ -34,9 +34,30 @@ from backend.app.domain.demo.canonical_data import (
     ADDR_HOP4_BINANCE_HOT,
     DemoFixtureProvider,
 )
+from backend.app.config import settings
 from backend.app.domain.demo.seed_demo_cases import CURATED_DEMO_CASES
 
-router = APIRouter(prefix="/demo", tags=["Demo Replay"])
+
+def verify_demo_enabled() -> None:
+    """
+    Security Gate: Block execution of demo routes in production environment.
+    Immediately raises HTTP 403 Forbidden with DEMO_MODE_DISABLED code.
+    """
+    if settings.APP_ENV.lower() == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "DEMO_MODE_DISABLED",
+                "message": "Demo routes are disabled in production environment.",
+            },
+        )
+
+
+router = APIRouter(
+    prefix="/demo",
+    tags=["Demo Replay"],
+    dependencies=[Depends(verify_demo_enabled)],
+)
 
 
 def get_canonical_scenario_dict() -> Dict[str, Any]:
