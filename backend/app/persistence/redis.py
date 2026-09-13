@@ -1,18 +1,39 @@
 import time
-from typing import AsyncGenerator
+import asyncio
+from typing import AsyncGenerator, Dict, Optional
 import redis.asyncio as aioredis
 from backend.app.config import settings
 from backend.app.logging import logger
 
-redis_pool = aioredis.ConnectionPool.from_url(
-    settings.REDIS_URL,
-    decode_responses=True,
-    max_connections=10,
-)
+_pools: Dict[Optional[asyncio.AbstractEventLoop], aioredis.ConnectionPool] = {}
+
+
+def get_redis_pool() -> aioredis.ConnectionPool:
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop not in _pools or _pools[loop] is None:
+        _pools[loop] = aioredis.ConnectionPool.from_url(
+            settings.REDIS_URL,
+            decode_responses=True,
+            max_connections=10,
+        )
+    return _pools[loop]
+
+
+class _RedisPoolProxy:
+    def __getattr__(self, name):
+        return getattr(get_redis_pool(), name)
+
+
+redis_pool = _RedisPoolProxy()
 
 
 async def get_redis() -> AsyncGenerator[aioredis.Redis, None]:
-    client = aioredis.Redis(connection_pool=redis_pool)
+    pool = get_redis_pool()
+    client = aioredis.Redis(connection_pool=pool)
     try:
         yield client
     finally:
