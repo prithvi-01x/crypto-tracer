@@ -20,9 +20,17 @@ node_modules/
 dist/
 .vite/
 
-# Environment variables
+# Environment variables & secrets
 .env
+.env.*
+.env.local
+.env.production
 !.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
 
 # IDEs & Editors
 .vscode/
