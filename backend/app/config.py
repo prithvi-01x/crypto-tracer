@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Union
 from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     REDIS_URL: SecretStr = SecretStr("redis://localhost:6379/0")
     
     # CORS & Hosts
-    CORS_ORIGINS: List[str] = [
+    CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
         "http://localhost",
         "http://127.0.0.1",
     ]
-    ALLOWED_HOSTS: List[str] = ["*"]
+    ALLOWED_HOSTS: Union[List[str], str] = ["*"]
 
     # Logging & Observability
     LOG_LEVEL: str = "INFO"
@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     # Execution Mode & Blockchain Ingestion (TRON / TronGrid)
     DEFAULT_EXECUTION_MODE: str = "LIVE"
     TRON_API_BASE_URL: str = "https://api.trongrid.io"
-    TRON_FALLBACK_API_URLS: List[str] = []
+    TRON_FALLBACK_API_URLS: Union[List[str], str] = []
     TRON_API_KEY: SecretStr = SecretStr("")
     TRON_USDT_CONTRACT: str = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
     TRON_HTTP_TIMEOUT_SECONDS: float = 10.0
@@ -98,26 +98,53 @@ class Settings(BaseSettings):
     # DPDP Act 2023 PII Encryption at Rest
     ENCRYPTION_KEY: Optional[SecretStr] = None
 
-    @field_validator("CORS_ORIGINS", mode="before")
+    @field_validator("CORS_ORIGINS", mode="after")
     @classmethod
     def parse_cors_origins(cls, v: Any) -> List[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",") if i.strip()]
-        return v
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("["):
+                import json
+                try:
+                    parsed = json.loads(v_str)
+                    if isinstance(parsed, list):
+                        return [str(i).strip() for i in parsed if str(i).strip()]
+                except Exception:
+                    pass
+            return [i.strip() for i in v_str.split(",") if i.strip()]
+        return [str(i).strip() for i in v] if isinstance(v, list) else []
 
-    @field_validator("ALLOWED_HOSTS", mode="before")
+    @field_validator("ALLOWED_HOSTS", mode="after")
     @classmethod
     def parse_allowed_hosts(cls, v: Any) -> List[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",") if i.strip()]
-        return v
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("["):
+                import json
+                try:
+                    parsed = json.loads(v_str)
+                    if isinstance(parsed, list):
+                        return [str(i).strip() for i in parsed if str(i).strip()]
+                except Exception:
+                    pass
+            return [i.strip() for i in v_str.split(",") if i.strip()]
+        return [str(i).strip() for i in v] if isinstance(v, list) else []
 
-    @field_validator("TRON_FALLBACK_API_URLS", mode="before")
+    @field_validator("TRON_FALLBACK_API_URLS", mode="after")
     @classmethod
     def parse_fallback_urls(cls, v: Any) -> List[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",") if i.strip()]
-        return v or []
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("["):
+                import json
+                try:
+                    parsed = json.loads(v_str)
+                    if isinstance(parsed, list):
+                        return [str(i).strip() for i in parsed if str(i).strip()]
+                except Exception:
+                    pass
+            return [i.strip() for i in v_str.split(",") if i.strip()]
+        return [str(i).strip() for i in v] if isinstance(v, list) else []
 
     @field_validator("REDIS_URL", mode="after")
     @classmethod
