@@ -14,6 +14,7 @@ class TraceCreateRequest(BaseModel):
     max_hops: int = Field(4, ge=1, le=6, description="Maximum graph traversal depth (1 to 6)", json_schema_extra={"example": 4})
     min_relevant_usd: Decimal = Field(Decimal("1.00"), ge=0, le=1000000, description="Minimum relevant transfer value", json_schema_extra={"example": 1.00})
     execution_mode: str = Field("LIVE", pattern="^(DEMO|LIVE)$", description="Execution mode: 'LIVE' or 'DEMO'")
+    sync: Optional[bool] = Field(None, description="Force sync (True -> 201) or async (False -> 202) execution")
 
 
 class TraceStatusResponse(BaseModel):
@@ -39,5 +40,58 @@ class TraceStatusResponse(BaseModel):
     is_partial: bool = False
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class JobStatusResponse(BaseModel):
+    job_id: str
+    trace_id: str
+    case_id: str
+    status: str = "QUEUED"
+    chain: str = "TRON"
+    input_value: str = ""
+    asset: str = "TRC20:USDT"
+    max_hops: int = 4
+    execution_mode: str = "LIVE"
+    poll_url: str
+    ws_url: str
+    created_at: datetime
+    message: str = "Trace job queued for background execution."
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TraceCancelRequest(BaseModel):
+    reason: Optional[str] = Field("Cancelled by investigator", max_length=500)
+
+
+class TraceCancelResponse(BaseModel):
+    trace_id: str
+    status: str = "CANCEL"
+    message: str = "Trace execution cancelled by investigator."
+    cancelled_at: datetime
+
+
+class TraceProgressResponse(BaseModel):
+    trace_id: str
+    status: str
+    current_hop: int = 0
+    max_hops: int = 4
+    progress_percent: float = 0.0
+    node_count: int = 0
+    edge_count: int = 0
+    pruned_count: int = 0
+    heartbeat_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TraceListResponse(BaseModel):
+    items: List[TraceStatusResponse] = Field(default_factory=list)
+    total: int = 0
+    next_cursor: Optional[str] = None
+    has_more: bool = False
 
     model_config = ConfigDict(from_attributes=True)
